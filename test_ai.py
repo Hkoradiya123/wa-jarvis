@@ -10,7 +10,11 @@ async def test_speed():
     start_time = time.time()
     
     print("⏳ Sending request to NVIDIA NIM...")
-    response = await call_llm(system_prompt, user_message, max_tokens=100)
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_message}
+    ]
+    response = await call_llm(messages, max_tokens=100)
     
     end_time = time.time()
     duration = end_time - start_time
