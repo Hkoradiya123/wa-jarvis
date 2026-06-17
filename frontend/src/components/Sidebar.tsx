@@ -1,11 +1,13 @@
 import React from 'react';
-import { Terminal, Database, Clock, Activity } from 'lucide-react';
+import { Terminal, Database, Clock, Activity, Settings, Shield } from 'lucide-react';
 
 const navItems = [
   { id: 'logs', label: 'LIVE_LOGS', icon: Activity },
   { id: 'memory', label: 'MEMORY_VAULT', icon: Database },
   { id: 'reminders', label: 'REMINDERS', icon: Clock },
   { id: 'console', label: 'DIRECT_CONSOLE', icon: Terminal },
+  { id: 'prompts', label: 'PROMPT_MANAGER', icon: Settings },
+  { id: 'status', label: 'SYSTEM_STATUS', icon: Shield },
 ];
 
 export const Sidebar = ({ activeTab, setActiveTab }: any) => (

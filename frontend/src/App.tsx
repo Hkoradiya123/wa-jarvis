@@ -4,6 +4,8 @@ import { MemoryVault } from './pages/MemoryVault';
 import { CommandCenter } from './pages/CommandCenter';
 import { Reminders } from './pages/Reminders';
 import { DirectConsole } from './pages/DirectConsole';
+import { PromptManager } from './pages/PromptManager';
+import { SystemStatus } from './pages/SystemStatus';
 
 function App() {
   const [activeTab, setActiveTab] = useState('logs');
@@ -60,6 +62,8 @@ function App() {
         {activeTab === 'memory' && <MemoryVault password={password} />}
         {activeTab === 'reminders' && <Reminders password={password} />}
         {activeTab === 'console' && <DirectConsole password={password} />}
+        {activeTab === 'prompts' && <PromptManager password={password} />}
+        {activeTab === 'status' && <SystemStatus password={password} />}
       </div>
     </Layout>
   );

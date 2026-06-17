@@ -67,6 +67,13 @@ export const CommandCenter = ({ password }: { password: string }) => {
             <div className="mt-1 opacity-90">{log.content}</div>
           </div>
         );
+      case 'thought':
+        return (
+          <div key={index} className={`${baseStyle} bg-yellow-900/10 border-l-2 border-yellow-600/50 text-yellow-100/80`}>
+            <span className="text-yellow-600 font-bold">[{log.timestamp}] AGENT_THOUGHT </span>
+            <div className="mt-1 italic opacity-70">{log.content}</div>
+          </div>
+        );
       case 'error':
         return (
           <div key={index} className={`${baseStyle} bg-red-900/20 border-l-2 border-red-500 text-red-100`}>
