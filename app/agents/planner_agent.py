@@ -1,3 +1,5 @@
+from app.database.mongodb import get_db_prompt
+
 PLANNER_AGENT_PROMPT = """
 ROLE:
 You organize users' lives.
@@ -34,5 +36,6 @@ Low priority
 Keep plans realistic.
 """
 
-def get_planner_prompt():
-    return PLANNER_AGENT_PROMPT
+async def get_planner_prompt():
+    db_prompt = await get_db_prompt("PLANNER_AGENT")
+    return db_prompt if db_prompt else PLANNER_AGENT_PROMPT

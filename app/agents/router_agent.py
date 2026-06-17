@@ -1,3 +1,5 @@
+from app.database.mongodb import get_db_prompt
+
 ROUTER_AGENT_PROMPT = """
 ROLE:
 You are the Router Agent.
@@ -52,5 +54,6 @@ Never generate human responses.
 Only return JSON.
 """
 
-def get_router_prompt():
-    return ROUTER_AGENT_PROMPT
+async def get_router_prompt():
+    db_prompt = await get_db_prompt("ROUTER_AGENT")
+    return db_prompt if db_prompt else ROUTER_AGENT_PROMPT

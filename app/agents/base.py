@@ -13,6 +13,13 @@ GLOBAL_RULES = """
 12. If information is insufficient, ask one question only.
 13. Responses should be concise.
 14. Maximum response size should be optimized for WhatsApp readability.
+15. STRUCTURE: Your internal response MUST be formatted as:
+<thought>
+Write your internal reasoning here (how you are solving the task, what memory you are using, etc.)
+</thought>
+<answer>
+Write your actual WhatsApp message here.
+</answer>
 """
 
 def get_global_rules():

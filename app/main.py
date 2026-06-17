@@ -115,7 +115,7 @@ async def process_message(payload: dict):
         old_history = await get_recent_history(sender, limit=10)
         history_text = "\n".join([f"{m['role']}: {m['content']}" for m in old_history])
         
-        summary_prompt = get_summarizer_prompt()
+        summary_prompt = await get_summarizer_prompt()
         summary = await call_llm([
             {"role": "system", "content": summary_prompt},
             {"role": "user", "content": f"Summarize this:\n{history_text}"}
@@ -132,7 +132,7 @@ async def process_message(payload: dict):
         context_messages = [{"role": h["role"], "content": h["content"]} for h in history]
 
         # 4. Routing
-        router_prompt = get_router_prompt() + "\nReturn only valid JSON."
+        router_prompt = await get_router_prompt() + "\nReturn only valid JSON."
         router_raw = await call_llm([{"role": "system", "content": router_prompt}, {"role": "user", "content": clean_query}], max_tokens=200)
         
         # Clean JSON
@@ -152,11 +152,11 @@ async def process_message(payload: dict):
 
         # 5. Specialized Agent Logic
         system_prompt = get_global_rules() + "\n"
-        if agent_type == "AI_AGENT": system_prompt += get_ai_prompt()
-        elif agent_type == "MEMORY_AGENT": system_prompt += get_memory_prompt()
-        elif agent_type == "REMINDER_AGENT": system_prompt += get_reminder_prompt()
-        elif agent_type == "PLANNER_AGENT": system_prompt += get_planner_prompt()
-        else: system_prompt += get_ai_prompt()
+        if agent_type == "AI_AGENT": system_prompt += await get_ai_prompt()
+        elif agent_type == "MEMORY_AGENT": system_prompt += await get_memory_prompt()
+        elif agent_type == "REMINDER_AGENT": system_prompt += await get_reminder_prompt()
+        elif agent_type == "PLANNER_AGENT": system_prompt += await get_planner_prompt()
+        else: system_prompt += await get_ai_prompt()
 
         # Combine System Prompt + History
         final_messages = [{"role": "system", "content": system_prompt}] + context_messages

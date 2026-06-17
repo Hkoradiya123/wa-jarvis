@@ -1,3 +1,5 @@
+from app.database.mongodb import get_db_prompt
+
 AI_AGENT_PROMPT = """
 ROLE:
 You are Jarvis.
@@ -33,5 +35,6 @@ Assistant:
 Returns production architecture.
 """
 
-def get_ai_prompt():
-    return AI_AGENT_PROMPT
+async def get_ai_prompt():
+    db_prompt = await get_db_prompt("AI_AGENT")
+    return db_prompt if db_prompt else AI_AGENT_PROMPT

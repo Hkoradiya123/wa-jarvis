@@ -1,3 +1,5 @@
+from app.database.mongodb import get_db_prompt
+
 SUMMARIZER_PROMPT = """
 ROLE:
 You are a Context Summarizer.
@@ -13,5 +15,6 @@ Format:
 "Previous context: [The summary]"
 """
 
-def get_summarizer_prompt():
-    return SUMMARIZER_PROMPT
+async def get_summarizer_prompt():
+    db_prompt = await get_db_prompt("SUMMARIZER_AGENT")
+    return db_prompt if db_prompt else SUMMARIZER_PROMPT

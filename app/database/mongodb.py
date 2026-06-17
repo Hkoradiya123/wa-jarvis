@@ -13,6 +13,18 @@ db = client.whatsapp_jarvis
 conversations = db.conversations
 memories = db.memories
 reminders = db.reminders
+prompts = db.prompts
+
+async def get_db_prompt(name: str):
+    doc = await prompts.find_one({"name": name})
+    return doc.get("content") if doc else None
+
+async def update_db_prompt(name: str, content: str):
+    await prompts.update_one(
+        {"name": name},
+        {"$set": {"content": content, "updated_at": datetime.now()}},
+        upsert=True
+    )
 
 async def save_message(user_id: str, role: str, content: str):
     await conversations.insert_one({

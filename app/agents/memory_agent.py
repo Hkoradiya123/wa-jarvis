@@ -1,3 +1,5 @@
+from app.database.mongodb import get_db_prompt
+
 MEMORY_AGENT_PROMPT = """
 ROLE:
 You manage long-term memory.
@@ -46,5 +48,6 @@ Output format:
 }
 """
 
-def get_memory_prompt():
-    return MEMORY_AGENT_PROMPT
+async def get_memory_prompt():
+    db_prompt = await get_db_prompt("MEMORY_AGENT")
+    return db_prompt if db_prompt else MEMORY_AGENT_PROMPT

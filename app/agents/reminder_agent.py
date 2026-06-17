@@ -1,3 +1,5 @@
+from app.database.mongodb import get_db_prompt
+
 REMINDER_AGENT_PROMPT = """
 ROLE:
 You manage reminders and notifications.
@@ -35,5 +37,6 @@ Examples:
 "When should I remind you?"
 """
 
-def get_reminder_prompt():
-    return REMINDER_AGENT_PROMPT
+async def get_reminder_prompt():
+    db_prompt = await get_db_prompt("REMINDER_AGENT")
+    return db_prompt if db_prompt else REMINDER_AGENT_PROMPT
