@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Layout } from './components/Layout';
+import { MemoryVault } from './pages/MemoryVault';
 
 function App() {
   const [activeTab, setActiveTab] = useState('logs');
@@ -13,7 +14,7 @@ function App() {
       </header>
       <div className="border border-gray-800 rounded bg-[#161b22] p-4 min-h-[400px]">
         {activeTab === 'logs' && <div>Log Stream Component Placeholder</div>}
-        {activeTab === 'memory' && <div>Memory Vault Component Placeholder</div>}
+        {activeTab === 'memory' && <MemoryVault />}
         {activeTab === 'reminders' && <div>Reminder Grid Component Placeholder</div>}
         {activeTab === 'console' && <div>Direct Console Component Placeholder</div>}
       </div>
