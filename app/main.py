@@ -1,7 +1,7 @@
 import os
 import json
 import httpx
-from fastapi import FastAPI, Request, BackgroundTasks
+from fastapi import FastAPI, Request, BackgroundTasks, WebSocket, WebSocketDisconnect
 from app.utils.llm import call_llm
 from app.agents.router_agent import get_router_prompt
 from app.agents.ai_agent import get_ai_prompt
@@ -14,7 +14,7 @@ from app.database.mongodb import (
     save_message, get_recent_history, count_messages, delete_oldest_messages,
     get_all_memories, delete_memory, get_all_reminders
 )
-from app.utils.logger import get_logger
+from app.utils.logger import get_logger, log_manager
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -87,6 +87,12 @@ async def process_message(payload: dict):
 
     # 2. Save user message to history
     await save_message(sender, "user", clean_query)
+    
+    await log_manager.broadcast({
+        "type": "incoming_message",
+        "sender": sender,
+        "content": clean_query
+    })
 
     # --- Auto Compaction Logic ---
     msg_count = await count_messages(sender)
@@ -125,6 +131,11 @@ async def process_message(payload: dict):
         except:
             agent_type = "AI_AGENT"
 
+        await log_manager.broadcast({
+            "type": "routing",
+            "agent": agent_type
+        })
+
         # 5. Specialized Agent Logic
         system_prompt = get_global_rules() + "\n"
         if agent_type == "AI_AGENT": system_prompt += get_ai_prompt()
@@ -137,10 +148,30 @@ async def process_message(payload: dict):
         final_messages = [{"role": "system", "content": system_prompt}] + context_messages
         
         response_text = await call_llm(final_messages)
+        await log_manager.broadcast({
+            "type": "outgoing_message",
+            "content": response_text
+        })
         await send_whatsapp_message(sender, response_text)
 
     except Exception as e:
         logger.error(f"Error processing: {e}", exc_info=True)
+        await log_manager.broadcast({
+            "type": "error",
+            "message": str(e)
+        })
+
+@app.websocket("/ws/logs")
+async def websocket_endpoint(websocket: WebSocket):
+    await log_manager.connect(websocket)
+    try:
+        while True:
+            # Keep connection alive
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        log_manager.disconnect(websocket)
+    except Exception:
+        log_manager.disconnect(websocket)
 
 @app.post("/webhook")
 async def whatsapp_webhook(request: Request, background_tasks: BackgroundTasks):
