@@ -8,8 +8,14 @@ ENV/
 env/
 .env
 
+# Local fix scripts
+apply_hf_*.py
+final_cors_fix.py
+fix_*.py
+hf_fix.patch
+
 # Docker
-.dockerignore
+# .dockerignore (removed from ignore to track it)
 
 # IDEs
 .vscode/
@@ -18,3 +24,8 @@ env/
 # OS
 .DS_Store
 Thumbs.db
+
+# Project specific
+graphify-out/
+app/graphify-out/
+

@@ -1,3 +1,17 @@
+---
+title: WhatsApp Jarvis
+emoji: 🤖
+colorFrom: green
+colorTo: blue
+sdk: docker
+sdk_version: "1.0.0"
+python_version: "3.11"
+app_file: app/main.py
+pinned: false
+app_port: 7860
+license: mit
+---
+
 # WhatsApp Jarvis - Multi-Agent AI Assistant
 
 WhatsApp Jarvis is a production-grade personal assistant powered by **NVIDIA NIM (Llama 3.1 8B)**, **FastAPI**, and **Open-WA**. It features a specialized agent architecture to handle general queries, memory, reminders, and daily planning with a natural conversational interface.

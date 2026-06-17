@@ -1,0 +1,13 @@
+.venv
+.git
+.env
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.db
+.DS_Store
+.vscode
+.idea
+graphify-out
+*.log
