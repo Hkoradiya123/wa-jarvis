@@ -2,6 +2,8 @@ import os
 import json
 import httpx
 from fastapi import FastAPI, Request, BackgroundTasks, WebSocket, WebSocketDisconnect
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from app.utils.llm import call_llm
 from app.agents.router_agent import get_router_prompt
 from app.agents.ai_agent import get_ai_prompt
@@ -202,6 +204,18 @@ async def list_reminders():
         item["_id"] = str(item["_id"])
     return items
 
+# Serve frontend static files
+app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="static")
+
+# Catch-all for SPA routing
+@app.exception_handler(404)
+async def spa_fallback(request: Request, exc):
+    # Only fallback for non-API requests
+    if not request.url.path.startswith("/api"):
+        return FileResponse("frontend/dist/index.html")
+    return {"detail": "Not Found"}
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
+    port = int(os.getenv("PORT", 7860))
+    uvicorn.run("app.main:app", host="0.0.0.0", port=port, reload=True)
