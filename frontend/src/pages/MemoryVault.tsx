@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { Trash2, Search } from 'lucide-react';
 
-export const MemoryVault = () => {
+export const MemoryVault = ({ password }: { password: string }) => {
   const [memories, setMemories] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchMemories = async () => {
-    const res = await fetch('/api/memories');
+    const res = await fetch('/api/memories', {
+      headers: { 'X-Password': password }
+    });
     const data = await res.json();
     setMemories(data);
     setLoading(false);
@@ -14,7 +16,10 @@ export const MemoryVault = () => {
 
   const deleteMemory = async (id: string) => {
     if (!confirm('Are you sure?')) return;
-    await fetch(`/api/memories/${id}`, { method: 'DELETE' });
+    await fetch(`/api/memories/${id}`, { 
+      method: 'DELETE',
+      headers: { 'X-Password': password }
+    });
     fetchMemories();
   };
 

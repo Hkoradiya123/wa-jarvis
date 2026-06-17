@@ -3,7 +3,7 @@ import json
 import httpx
 from fastapi import FastAPI, Request, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from app.utils.llm import call_llm
 from app.agents.router_agent import get_router_prompt
 from app.agents.ai_agent import get_ai_prompt
@@ -23,6 +23,18 @@ load_dotenv()
 
 app = FastAPI()
 logger = get_logger("main")
+
+@app.middleware("http")
+async def dashboard_security(request: Request, call_next):
+    # Skip security for static files and webhook
+    path = request.url.path
+    if path.startswith("/api/") or path.startswith("/ws/"):
+        password = os.getenv("DASHBOARD_PASSWORD")
+        if password:
+            req_pass = request.headers.get("X-Password") or request.query_params.get("password")
+            if req_pass != password:
+                return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+    return await call_next(request)
 
 OPENWA_API_URL = os.getenv("OPENWA_API_URL", "http://localhost:2785")
 OPENWA_API_KEY = os.getenv("OPENWA_API_KEY")
