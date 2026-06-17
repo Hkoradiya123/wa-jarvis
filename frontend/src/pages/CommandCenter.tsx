@@ -17,8 +17,8 @@ export const CommandCenter = ({ password }: { password: string }) => {
 
   useEffect(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    // Use the same host but port 8000 for backend if on dev, or same host/port if in prod
-    const host = window.location.hostname === 'localhost' ? 'localhost:8000' : window.location.host;
+    // Use the same host but port 7860 for backend if on dev, or same host/port if in prod
+    const host = window.location.hostname === 'localhost' ? 'localhost:7860' : window.location.host;
     const ws = new WebSocket(`${protocol}//${host}/ws/logs?password=${password}`);
 
     ws.onopen = () => setStatus('connected');
