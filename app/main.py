@@ -15,8 +15,10 @@ from app.agents.summarizer_agent import get_summarizer_prompt
 from app.agents.base import get_global_rules
 from app.database.mongodb import (
     save_message, get_recent_history, count_messages, delete_oldest_messages,
-    get_all_memories, delete_memory, get_all_reminders
+    get_all_memories, delete_memory, get_all_reminders, update_db_prompt,
+    db as mongodb_db
 )
+from pydantic import BaseModel
 from app.utils.logger import get_logger, log_manager
 from dotenv import load_dotenv
 
@@ -24,6 +26,52 @@ load_dotenv()
 
 app = FastAPI()
 logger = get_logger("main")
+
+class PromptUpdate(BaseModel):
+    content: str
+
+@app.get("/api/prompts")
+async def list_prompts():
+    all_prompts = {
+        "AI_AGENT": await get_ai_prompt(),
+        "MEMORY_AGENT": await get_memory_prompt(),
+        "REMINDER_AGENT": await get_reminder_prompt(),
+        "PLANNER_AGENT": await get_planner_prompt(),
+        "SUMMARIZER_AGENT": await get_summarizer_prompt(),
+        "ROUTER_AGENT": await get_router_prompt()
+    }
+    return all_prompts
+
+@app.post("/api/prompts/{name}")
+async def set_prompt(name: str, update: PromptUpdate):
+    await update_db_prompt(name, update.content)
+    return {"status": "success"}
+
+@app.get("/api/system/status")
+async def get_system_status():
+    status = {
+        "mongodb": "online",
+        "nvidia_api": "configured" if os.getenv("NVIDIA_API_KEY") else "missing",
+        "openwa_gateway": "unknown"
+    }
+    # Check MongoDB
+    try:
+        await mongodb_db.command("ping")
+    except Exception:
+        status["mongodb"] = "offline"
+
+    # Check gateway
+    try:
+        async with httpx.AsyncClient() as client:
+            res = await client.get(os.getenv("OPENWA_API_URL", "http://localhost:2785"), timeout=2.0)
+            if res.status_code < 500:
+                status["openwa_gateway"] = "online"
+            else:
+                status["openwa_gateway"] = f"error_{res.status_code}"
+    except Exception:
+        status["openwa_gateway"] = "offline"
+    
+    return status
 
 @app.middleware("http")
 async def dashboard_security(request: Request, call_next):
