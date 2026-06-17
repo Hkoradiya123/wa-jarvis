@@ -1,0 +1,34 @@
+import React from 'react';
+import { Terminal, Database, Clock, Activity } from 'lucide-react';
+
+const navItems = [
+  { id: 'logs', label: 'LIVE_LOGS', icon: Activity },
+  { id: 'memory', label: 'MEMORY_VAULT', icon: Database },
+  { id: 'reminders', label: 'REMINDERS', icon: Clock },
+  { id: 'console', label: 'DIRECT_CONSOLE', icon: Terminal },
+];
+
+export const Sidebar = ({ activeTab, setActiveTab }: any) => (
+  <div className="w-64 border-r border-gray-800 h-screen flex flex-col bg-[#0d1117]">
+    <div className="p-4 border-b border-gray-800 font-bold text-sm tracking-widest text-blue-400">
+      JARVIS_OS
+    </div>
+    <nav className="flex-1 p-2 space-y-1">
+      {navItems.map((item) => (
+        <button
+          key={item.id}
+          onClick={() => setActiveTab(item.id)}
+          className={`w-full flex items-center space-x-3 px-3 py-2 text-xs rounded transition-colors ${
+            activeTab === item.id ? 'bg-gray-800 text-white' : 'text-gray-500 hover:text-gray-300'     
+          }`}
+        >
+          <item.icon size={14} />
+          <span>{item.label}</span>
+        </button>
+      ))}
+    </nav>
+    <div className="p-4 border-t border-gray-800 text-[10px] text-gray-600">
+      STATUS: CONNECTED
+    </div>
+  </div>
+);
