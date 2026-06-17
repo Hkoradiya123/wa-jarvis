@@ -26,13 +26,16 @@ async def update_db_prompt(name: str, content: str):
         upsert=True
     )
 
-async def save_message(user_id: str, role: str, content: str):
-    await conversations.insert_one({
+async def save_message(user_id: str, role: str, content: str, thought: str = None):
+    doc = {
         "user_id": user_id,
         "role": role,
         "content": content,
         "timestamp": datetime.utcnow()
-    })
+    }
+    if thought:
+        doc["thought"] = thought
+    await conversations.insert_one(doc)
 
 async def get_recent_history(user_id: str, limit: int = 15):
     cursor = conversations.find({"user_id": user_id}).sort("timestamp", -1).limit(limit)

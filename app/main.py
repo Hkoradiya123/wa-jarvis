@@ -1,6 +1,7 @@
 import os
 import json
 import httpx
+import re
 from fastapi import FastAPI, Request, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
@@ -41,7 +42,7 @@ OPENWA_API_KEY = os.getenv("OPENWA_API_KEY")
 SESSION_ID = os.getenv("SESSION_ID", "default")
 TRIGGER_WORD = os.getenv("TRIGGER_WORD", "//jarvis").lower()
 
-async def send_whatsapp_message(to: str, body: str):
+async def send_whatsapp_message(to: str, body: str, thought: str = None):
     current_session = os.getenv("SESSION_ID", SESSION_ID)
     current_api_url = os.getenv("OPENWA_API_URL", OPENWA_API_URL)
     current_api_key = os.getenv("OPENWA_API_KEY", OPENWA_API_KEY)
@@ -57,7 +58,7 @@ async def send_whatsapp_message(to: str, body: str):
             if response.status_code in [200, 201]:
                 send_logger.info(f"Message sent to {to}")
                 # Save bot response to history
-                await save_message(to, "assistant", body)
+                await save_message(to, "assistant", body, thought=thought)
             else:
                 send_logger.error(f"Failed to send: {response.text}")
     except Exception as e:
@@ -162,11 +163,30 @@ async def process_message(payload: dict):
         final_messages = [{"role": "system", "content": system_prompt}] + context_messages
         
         response_text = await call_llm(final_messages)
+        
+        # 6. Extract Thought and Answer
+        thought_match = re.search(r'<thought>(.*?)</thought>', response_text, re.DOTALL)
+        answer_match = re.search(r'<answer>(.*?)</answer>', response_text, re.DOTALL)
+        
+        thought = thought_match.group(1).strip() if thought_match else ""
+        
+        if answer_match:
+            clean_answer = answer_match.group(1).strip()
+        else:
+            # Fallback: remove thought tags if present to keep WhatsApp clean
+            clean_answer = re.sub(r'<thought>.*?</thought>', '', response_text, flags=re.DOTALL).strip()
+        
+        if thought:
+            await log_manager.broadcast({
+                "type": "thought",
+                "content": thought
+            })
+
         await log_manager.broadcast({
             "type": "outgoing_message",
-            "content": response_text
+            "content": clean_answer
         })
-        await send_whatsapp_message(sender, response_text)
+        await send_whatsapp_message(sender, clean_answer, thought=thought)
 
     except Exception as e:
         logger.error(f"Error processing: {e}", exc_info=True)
