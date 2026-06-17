@@ -10,7 +10,10 @@ from app.agents.reminder_agent import get_reminder_prompt
 from app.agents.planner_agent import get_planner_prompt
 from app.agents.summarizer_agent import get_summarizer_prompt
 from app.agents.base import get_global_rules
-from app.database.mongodb import save_message, get_recent_history, count_messages, delete_oldest_messages
+from app.database.mongodb import (
+    save_message, get_recent_history, count_messages, delete_oldest_messages,
+    get_all_memories, delete_memory, get_all_reminders
+)
 from app.utils.logger import get_logger
 from dotenv import load_dotenv
 
@@ -147,6 +150,26 @@ async def whatsapp_webhook(request: Request, background_tasks: BackgroundTasks):
     if event in ["message", "message.received", "message.sent"] and payload:
         background_tasks.add_task(process_message, payload)
     return {"status": "success"}
+
+@app.get("/api/memories")
+async def list_memories():
+    items = await get_all_memories()
+    # Convert ObjectId to str for JSON serialization       
+    for item in items:
+        item["_id"] = str(item["_id"])  
+    return items
+
+@app.delete("/api/memories/{memory_id}")
+async def remove_memory(memory_id: str):
+    await delete_memory(memory_id)
+    return {"status": "deleted"}
+
+@app.get("/api/reminders")
+async def list_reminders():
+    items = await get_all_reminders()
+    for item in items:
+        item["_id"] = str(item["_id"])
+    return items
 
 if __name__ == "__main__":
     import uvicorn

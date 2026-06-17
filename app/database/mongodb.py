@@ -37,3 +37,15 @@ async def delete_oldest_messages(user_id: str, count: int):
     ids = [m["_id"] for m in old_msgs]
     if ids:
         await conversations.delete_many({"_id": {"$in": ids}})
+
+async def get_all_memories():
+    cursor = memories.find({}).sort("timestamp", -1)       
+    return await cursor.to_list(length=100)
+
+async def delete_memory(memory_id: str):
+    from bson import ObjectId
+    await memories.delete_one({"_id": ObjectId(memory_id)})
+
+async def get_all_reminders():
+    cursor = reminders.find({}).sort("datetime", 1)        
+    return await cursor.to_list(length=100)
