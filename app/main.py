@@ -49,9 +49,12 @@ async def set_prompt(name: str, update: PromptUpdate):
 
 @app.get("/api/system/status")
 async def get_system_status():
+    nvidia_key = os.getenv("NVIDIA_API_KEY")
+    masked_nvidia = f"{nvidia_key[:6]}****{nvidia_key[-4:]}" if nvidia_key and len(nvidia_key) > 10 else "missing"
+    
     status = {
         "mongodb": "online",
-        "nvidia_api": "configured" if os.getenv("NVIDIA_API_KEY") else "missing",
+        "nvidia_api": masked_nvidia,
         "openwa_gateway": "unknown"
     }
     # Check MongoDB
