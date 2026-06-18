@@ -46,6 +46,7 @@ async def startup_event():
                 for s in sessions:
                     if s.get("status") in ["CONNECTED", "ready"]:
                         SESSION_ID = s.get("id")
+                        os.environ["SESSION_ID"] = SESSION_ID
                         logger.info(f"✅ Auto-discovered active session: {SESSION_ID}")
                         break
     except Exception as e:
