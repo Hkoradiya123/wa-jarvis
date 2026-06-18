@@ -10,30 +10,8 @@ interface LogEntry {
   timestamp: string;
 }
 
-export const CommandCenter = ({ username, password }: any) => {
-  const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [status, setStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting');
+export const CommandCenter = ({ username, password, logs, wsStatus }: any) => {
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    // Use the same host but port 7860 for backend if on dev, or same host/port if in prod
-    const host = window.location.hostname === 'localhost' ? 'localhost:7860' : window.location.host;
-    const ws = new WebSocket(`${protocol}//${host}/ws/logs?username=${username}&password=${password}`);
-
-    ws.onopen = () => setStatus('connected');
-    ws.onclose = () => setStatus('disconnected');
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        setLogs((prev) => [...prev, { ...data, timestamp: new Date().toLocaleTimeString() }].slice(-50));
-      } catch (e) {
-        console.error("Failed to parse log message:", e);
-      }
-    };
-
-    return () => ws.close();
-  }, []);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -100,10 +78,10 @@ export const CommandCenter = ({ username, password }: any) => {
             <span className="text-xs font-bold text-gray-400">SYSTEM_STREAM</span>
           </div>
           <div className={`flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] uppercase font-bold ${
-            status === 'connected' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+            wsStatus === 'connected' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
           }`}>
             <Wifi size={10} />
-            <span>{status}</span>
+            <span>{wsStatus}</span>
           </div>
         </div>
         <div className="text-[10px] text-gray-600 uppercase">

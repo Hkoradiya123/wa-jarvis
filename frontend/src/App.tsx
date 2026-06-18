@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout } from './components/Layout';
 import { MemoryVault } from './pages/MemoryVault';
 import { CommandCenter } from './pages/CommandCenter';
@@ -9,10 +9,44 @@ import { SystemStatus } from './pages/SystemStatus';
 import { UserManagement } from './pages/UserManagement';
 import { LoginPage } from './pages/LoginPage';
 
+interface LogEntry {
+  type: string;
+  sender?: string;
+  content?: string;
+  agent?: string;
+  message?: string;
+  timestamp: string;
+}
+
 function App() {
   const [activeTab, setActiveTab] = useState('logs');
   const [username, setUsername] = useState<string | null>(localStorage.getItem('dashboard_user'));
   const [password, setPassword] = useState<string | null>(localStorage.getItem('dashboard_password'));
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [wsStatus, setWsStatus] = useState<'connected' | 'disconnected' | 'connecting'>('disconnected');
+
+  useEffect(() => {
+    if (!username || !password) return;
+
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.hostname === 'localhost' ? 'localhost:7860' : window.location.host;
+    const ws = new WebSocket(`${protocol}//${host}/ws/logs?username=${username}&password=${password}`);
+
+    setWsStatus('connecting');
+
+    ws.onopen = () => setWsStatus('connected');
+    ws.onclose = () => setWsStatus('disconnected');
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        setLogs((prev) => [...prev, { ...data, timestamp: new Date().toLocaleTimeString() }].slice(-50));
+      } catch (e) {
+        console.error("Failed to parse log message:", e);
+      }
+    };
+
+    return () => ws.close();
+  }, [username, password]);
 
   const handleLogin = (user: string, pass: string) => {
     localStorage.setItem('dashboard_user', user);
@@ -41,6 +75,7 @@ function App() {
               localStorage.removeItem('dashboard_password'); 
               setUsername(null);
               setPassword(null); 
+              setLogs([]);
             }}
             className="text-[10px] text-gray-600 hover:text-red-500"
           >
@@ -49,7 +84,7 @@ function App() {
         </div>
       </header>
       <div className="border border-gray-800 rounded bg-[#161b22] p-4 min-h-[400px]">
-        {activeTab === 'logs' && <CommandCenter {...authProps} />}
+        {activeTab === 'logs' && <CommandCenter {...authProps} logs={logs} wsStatus={wsStatus} />}
         {activeTab === 'memory' && <MemoryVault {...authProps} />}
         {activeTab === 'reminders' && <Reminders {...authProps} />}
         {activeTab === 'console' && <DirectConsole {...authProps} />}
@@ -62,3 +97,4 @@ function App() {
 }
 
 export default App;
+
