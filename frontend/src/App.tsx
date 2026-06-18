@@ -6,42 +6,19 @@ import { Reminders } from './pages/Reminders';
 import { DirectConsole } from './pages/DirectConsole';
 import { PromptManager } from './pages/PromptManager';
 import { SystemStatus } from './pages/SystemStatus';
+import { LoginPage } from './pages/LoginPage';
 
 function App() {
   const [activeTab, setActiveTab] = useState('logs');
   const [password, setPassword] = useState<string | null>(localStorage.getItem('dashboard_password'));
-  const [tempPass, setTempPass] = useState('');
+
+  const handleLogin = (pass: string) => {
+    localStorage.setItem('dashboard_password', pass);
+    setPassword(pass);
+  };
 
   if (!password) {
-    return (
-      <div className="min-h-screen bg-[#0d1117] text-gray-300 flex items-center justify-center font-mono">
-        <div className="border border-gray-800 p-8 rounded bg-[#161b22] w-96">
-          <h1 className="text-blue-500 font-bold mb-4 tracking-widest text-sm">JARVIS_OS_LOGIN</h1>
-          <input
-            type="password"
-            placeholder="ENTER_PASSWORD..."
-            value={tempPass}
-            onChange={(e) => setTempPass(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                localStorage.setItem('dashboard_password', tempPass);
-                setPassword(tempPass);
-              }
-            }}
-            className="w-full bg-black border border-gray-800 rounded px-3 py-2 text-xs focus:outline-none focus:border-blue-500"
-          />
-          <button
-            onClick={() => {
-              localStorage.setItem('dashboard_password', tempPass);
-              setPassword(tempPass);
-            }}
-            className="mt-4 w-full bg-blue-900/20 text-blue-500 border border-blue-900/50 py-2 text-[10px] hover:bg-blue-900/30"
-          >
-            ACCESS_SYSTEM
-          </button>
-        </div>
-      </div>
-    );
+    return <LoginPage onLogin={handleLogin} />;
   }
 
   return (
