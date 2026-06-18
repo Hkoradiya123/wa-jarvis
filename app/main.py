@@ -153,8 +153,11 @@ async def send_whatsapp_message(to: str, body: str, thought: str = None):
     current_api_url = os.getenv("OPENWA_API_URL", OPENWA_API_URL)
     current_api_key = os.getenv("OPENWA_API_KEY", OPENWA_API_KEY)
 
-    # Clean up URL to avoid double slashes
-    base_url = current_api_url.rstrip("/")
+    # Ensure protocol is present and clean up URL
+    base_url = current_api_url.strip().rstrip("/")
+    if not base_url.startswith("http"):
+        base_url = f"https://{base_url}"
+        
     url = f"{base_url}/api/sessions/{current_session}/messages/send-text"
     headers = {"Authorization": f"Bearer {current_api_key}"}
     payload = {"chatId": to, "text": body}
