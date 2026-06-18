@@ -8,6 +8,7 @@ import { PromptManager } from './pages/PromptManager';
 import { SystemStatus } from './pages/SystemStatus';
 import { UserManagement } from './pages/UserManagement';
 import { LoginPage } from './pages/LoginPage';
+import { Conversations } from './pages/Conversations';
 
 interface LogEntry {
   type: string;
@@ -97,4 +98,6 @@ function App() {
 }
 
 export default App;
+
+port default App;
 

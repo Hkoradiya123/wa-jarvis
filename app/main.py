@@ -18,7 +18,8 @@ from app.agents.base import get_global_rules
 from app.database.mongodb import (
     save_message, get_recent_history, count_messages, delete_oldest_messages,
     get_all_memories, delete_memory, get_all_reminders, update_db_prompt,
-    db as mongodb_db, get_user, verify_password, seed_admin, list_users, create_user, delete_user
+    db as mongodb_db, get_user, verify_password, seed_admin, list_users, create_user, delete_user,
+    get_all_conversations, get_conversation_history
 )
 from pydantic import BaseModel, Field
 from app.utils.logger import get_logger, log_manager
@@ -431,6 +432,22 @@ async def list_reminders():
     for item in items:
         item["_id"] = str(item["_id"])
     return items
+
+@app.get("/api/conversations")
+async def list_conversations():
+    convos = await get_all_conversations()
+    # Rename '_id' to 'user_id' for clarity on the frontend
+    for convo in convos:
+        convo["user_id"] = convo.pop("_id")
+    return convos
+
+@app.get("/api/conversations/{user_id}")
+async def get_single_conversation(user_id: str):
+    history = await get_conversation_history(user_id)
+    for message in history:
+        message["_id"] = str(message["_id"])
+    return history
+
 
 # Serve frontend static files
 app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="static")

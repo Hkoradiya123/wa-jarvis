@@ -118,3 +118,23 @@ async def save_reminder_task(user_id: str, title: str, datetime_str: str, priori
         "status": "pending",
         "timestamp": datetime.now(timezone.utc)
     })
+
+async def get_all_conversations():
+    """Returns a list of unique user_ids and their last message time."""
+    pipeline = [
+        {"$sort": {"timestamp": -1}},
+        {"$group": {
+            "_id": "$user_id",
+            "last_message_time": {"$first": "$timestamp"},
+            "last_message_content": {"$first": "$content"},
+            "message_count": {"$sum": 1}
+        }},
+        {"$sort": {"last_message_time": -1}}
+    ]
+    cursor = conversations.aggregate(pipeline)
+    return await cursor.to_list(length=None)
+
+async def get_conversation_history(user_id: str):
+    """Returns the full message history for a user."""
+    cursor = conversations.find({"user_id": user_id}).sort("timestamp", 1)
+    return await cursor.to_list(length=None)
