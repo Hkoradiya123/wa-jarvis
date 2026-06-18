@@ -437,17 +437,41 @@ async def get_ai_response(user_id: str, query: str):
     else:
         return re.sub(r'<thought>.*?</thought>', '', response_text, flags=re.DOTALL).strip()
 
-class ChatMessage(BaseModel):
+class NewChatMessage(BaseModel):
     message: str
+    session_id: str | None = None
 
-@app.post("/api/chat")
-async def handle_chat(request: Request, chat_message: ChatMessage):
-    # Get user from the request state, which is populated by the middleware
+@app.get("/api/ai_chat/sessions")
+async def list_ai_chat_sessions():
+    sessions = await get_ai_chat_sessions()
+    for s in sessions:
+        s["session_id"] = s.pop("_id")
+    return sessions
+
+@app.get("/api/ai_chat/sessions/{session_id}")
+async def get_single_ai_chat_session(session_id: str):
+    history = await get_ai_chat_history(session_id)
+    for message in history:
+        message["_id"] = str(message["_id"])
+    return history
+
+@app.post("/api/ai_chat")
+async def handle_new_ai_chat(request: Request, chat_message: NewChatMessage):
     user = request.state.user
-    user_id = user.get("username", "direct_chat_user")
+    user_id = user.get("username", "direct_chat_user") # For context in get_ai_response
     
-    response = await get_ai_response(user_id, chat_message.message)
-    return {"response": response}
+    session_id = chat_message.session_id or str(uuid.uuid4())
+    
+    # Save user message
+    await add_ai_chat_message(session_id, "user", chat_message.message)
+    
+    # Get AI response (using the existing stateless function for the logic)
+    ai_response_content = await get_ai_response(user_id, chat_message.message)
+    
+    # Save AI message
+    await add_ai_chat_message(session_id, "assistant", ai_response_content)
+    
+    return {"response": ai_response_content, "session_id": session_id}
 
 
 @app.post("/webhook")

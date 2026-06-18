@@ -138,3 +138,31 @@ async def get_conversation_history(user_id: str):
     """Returns the full message history for a user."""
     cursor = conversations.find({"user_id": user_id}).sort("timestamp", 1)
     return await cursor.to_list(length=None)
+
+async def get_ai_chat_sessions():
+    """Returns a summary of all AI chat sessions."""
+    pipeline = [
+        {"$sort": {"timestamp": 1}},
+        {"$group": {
+            "_id": "$session_id",
+            "first_message": {"$first": "$content"},
+            "last_message_time": {"$last": "$timestamp"}
+        }},
+        {"$sort": {"last_message_time": -1}}
+    ]
+    cursor = ai_chats.aggregate(pipeline)
+    return await cursor.to_list(length=None)
+
+async def get_ai_chat_history(session_id: str):
+    """Returns all messages for a specific AI chat session."""
+    cursor = ai_chats.find({"session_id": session_id}).sort("timestamp", 1)
+    return await cursor.to_list(length=None)
+
+async def add_ai_chat_message(session_id: str, role: str, content: str):
+    """Adds a new message to an AI chat session."""
+    await ai_chats.insert_one({
+        "session_id": session_id,
+        "role": role,
+        "content": content,
+        "timestamp": datetime.now(timezone.utc)
+    })
