@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Database, Cpu, Globe, RefreshCw, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
 
-export const SystemStatus = ({ password }: { password: string }) => {
+export const SystemStatus = ({ username, password }: any) => {
   const [status, setStatus] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -9,7 +9,7 @@ export const SystemStatus = ({ password }: { password: string }) => {
     setLoading(true);
     try {
       const res = await fetch('/api/system/status', {
-        headers: { 'X-Password': password }
+        headers: { 'X-Username': username, 'X-Password': password }
       });
       const data = await res.json();
       setStatus(data);

@@ -6,20 +6,26 @@ import { Reminders } from './pages/Reminders';
 import { DirectConsole } from './pages/DirectConsole';
 import { PromptManager } from './pages/PromptManager';
 import { SystemStatus } from './pages/SystemStatus';
+import { UserManagement } from './pages/UserManagement';
 import { LoginPage } from './pages/LoginPage';
 
 function App() {
   const [activeTab, setActiveTab] = useState('logs');
+  const [username, setUsername] = useState<string | null>(localStorage.getItem('dashboard_user'));
   const [password, setPassword] = useState<string | null>(localStorage.getItem('dashboard_password'));
 
-  const handleLogin = (pass: string) => {
+  const handleLogin = (user: string, pass: string) => {
+    localStorage.setItem('dashboard_user', user);
     localStorage.setItem('dashboard_password', pass);
+    setUsername(user);
     setPassword(pass);
   };
 
-  if (!password) {
+  if (!username || !password) {
     return <LoginPage onLogin={handleLogin} />;
   }
+
+  const authProps = { username: username!, password: password! };
 
   return (
     <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
@@ -27,20 +33,29 @@ function App() {
         <h2 className="text-sm font-bold text-gray-500 uppercase tracking-tighter">
           Root / {activeTab}
         </h2>
-        <button 
-          onClick={() => { localStorage.removeItem('dashboard_password'); setPassword(null); }}
-          className="text-[10px] text-gray-600 hover:text-red-500"
-        >
-          LOGOUT
-        </button>
+        <div className="flex items-center space-x-4">
+          <span className="text-[10px] text-blue-500 font-bold uppercase">ID: {username}</span>
+          <button 
+            onClick={() => { 
+              localStorage.removeItem('dashboard_user');
+              localStorage.removeItem('dashboard_password'); 
+              setUsername(null);
+              setPassword(null); 
+            }}
+            className="text-[10px] text-gray-600 hover:text-red-500"
+          >
+            LOGOUT
+          </button>
+        </div>
       </header>
       <div className="border border-gray-800 rounded bg-[#161b22] p-4 min-h-[400px]">
-        {activeTab === 'logs' && <CommandCenter password={password} />}
-        {activeTab === 'memory' && <MemoryVault password={password} />}
-        {activeTab === 'reminders' && <Reminders password={password} />}
-        {activeTab === 'console' && <DirectConsole password={password} />}
-        {activeTab === 'prompts' && <PromptManager password={password} />}
-        {activeTab === 'status' && <SystemStatus password={password} />}
+        {activeTab === 'logs' && <CommandCenter {...authProps} />}
+        {activeTab === 'memory' && <MemoryVault {...authProps} />}
+        {activeTab === 'reminders' && <Reminders {...authProps} />}
+        {activeTab === 'console' && <DirectConsole {...authProps} />}
+        {activeTab === 'prompts' && <PromptManager {...authProps} />}
+        {activeTab === 'status' && <SystemStatus {...authProps} />}
+        {activeTab === 'users' && <UserManagement {...authProps} />}
       </div>
     </Layout>
   );

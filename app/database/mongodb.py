@@ -14,6 +14,42 @@ conversations = db.conversations
 memories = db.memories
 reminders = db.reminders
 prompts = db.prompts
+users = db.users
+
+from passlib.context import CryptContext
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_password_hash(password):
+    return pwd_context.hash(password)
+
+async def get_user(username: str):
+    return await users.find_one({"username": username})
+
+async def create_user(username: str, password: str, role: str = "user"):
+    hashed = get_password_hash(password)
+    await users.insert_one({
+        "username": username,
+        "password": hashed,
+        "role": role,
+        "created_at": datetime.utcnow()
+    })
+
+async def list_users():
+    cursor = users.find({}, {"password": 0})
+    return await cursor.to_list(length=100)
+
+async def delete_user(username: str):
+    await users.delete_one({"username": username})
+
+# Seed Admin User if not exists
+async def seed_admin():
+    admin = await get_user("admin")
+    if not admin:
+        # Default password from user request
+        await create_user("admin", "Hkoradiya.jarvis", role="admin")
 
 async def get_db_prompt(name: str):
     doc = await prompts.find_one({"name": name})

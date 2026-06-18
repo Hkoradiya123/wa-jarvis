@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { Clock } from 'lucide-react';
 
-export const Reminders = ({ password }: { password: string }) => {
+export const Reminders = ({ username, password }: any) => {
   const [reminders, setReminders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchReminders = async () => {
     try {
       const res = await fetch('/api/reminders', {
-        headers: { 'X-Password': password }
+        headers: { 'X-Username': username, 'X-Password': password }
       });
       const data = await res.json();
       setReminders(data);

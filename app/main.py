@@ -16,16 +16,82 @@ from app.agents.base import get_global_rules
 from app.database.mongodb import (
     save_message, get_recent_history, count_messages, delete_oldest_messages,
     get_all_memories, delete_memory, get_all_reminders, update_db_prompt,
-    db as mongodb_db
+    db as mongodb_db, get_user, verify_password, seed_admin, list_users, create_user, delete_user
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from app.utils.logger import get_logger, log_manager
 from dotenv import load_dotenv
 
 load_dotenv()
 
 app = FastAPI()
+
+@app.on_event("startup")
+async def startup_event():
+    await seed_admin()
+
 logger = get_logger("main")
+
+class UserCreate(BaseModel):
+    username: str
+    password: str
+    role: str = "user"
+
+@app.middleware("http")
+async def dashboard_security(request: Request, call_next):
+    # Skip security for static files and webhook
+    path = request.url.path
+    if path.startswith("/api/") or path.startswith("/ws/"):
+        username = request.headers.get("X-Username") or request.query_params.get("username")
+        password = request.headers.get("X-Password") or request.query_params.get("password")
+        
+        if not username or not password:
+            return JSONResponse(status_code=401, content={"detail": "Missing credentials"})
+        
+        user = await get_user(username)
+        if not user or not verify_password(password, user["password"]):
+            return JSONResponse(status_code=401, content={"detail": "Invalid credentials"})
+            
+        # Add user info to request state if needed
+        request.state.user = user
+            
+    return await call_next(request)
+
+# ... API endpoints ...
+
+@app.get("/api/users")
+async def get_users(request: Request):
+    if request.state.user.get("role") != "admin":
+        return JSONResponse(status_code=403, content={"detail": "Admin access required"})
+    users = await list_users()
+    for user in users:
+        user["_id"] = str(user["_id"])
+        if "created_at" in user:
+            user["created_at"] = user["created_at"].isoformat()
+    return users
+
+@app.post("/api/users")
+async def add_user(request: Request, user: UserCreate):
+    if request.state.user.get("role") != "admin":
+        return JSONResponse(status_code=403, content={"detail": "Admin access required"})
+    
+    existing = await get_user(user.username)
+    if existing:
+        return JSONResponse(status_code=400, content={"detail": "User already exists"})
+        
+    await create_user(user.username, user.password, user.role)
+    return {"status": "success"}
+
+@app.delete("/api/users/{username}")
+async def remove_user(request: Request, username: str):
+    if request.state.user.get("role") != "admin":
+        return JSONResponse(status_code=403, content={"detail": "Admin access required"})
+    
+    if username == "admin":
+        return JSONResponse(status_code=400, content={"detail": "Cannot delete super admin"})
+        
+    await delete_user(username)
+    return {"status": "success"}
 
 class PromptUpdate(BaseModel):
     content: str
@@ -76,17 +142,6 @@ async def get_system_status():
     
     return status
 
-@app.middleware("http")
-async def dashboard_security(request: Request, call_next):
-    # Skip security for static files and webhook
-    path = request.url.path
-    if path.startswith("/api/") or path.startswith("/ws/"):
-        password = os.getenv("DASHBOARD_PASSWORD")
-        if password:
-            req_pass = request.headers.get("X-Password") or request.query_params.get("password")
-            if req_pass != password:
-                return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
-    return await call_next(request)
 
 OPENWA_API_URL = os.getenv("OPENWA_API_URL", "http://localhost:2785")
 OPENWA_API_KEY = os.getenv("OPENWA_API_KEY")

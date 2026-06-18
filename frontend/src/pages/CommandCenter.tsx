@@ -10,7 +10,7 @@ interface LogEntry {
   timestamp: string;
 }
 
-export const CommandCenter = ({ password }: { password: string }) => {
+export const CommandCenter = ({ username, password }: any) => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [status, setStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting');
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -19,7 +19,7 @@ export const CommandCenter = ({ password }: { password: string }) => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     // Use the same host but port 7860 for backend if on dev, or same host/port if in prod
     const host = window.location.hostname === 'localhost' ? 'localhost:7860' : window.location.host;
-    const ws = new WebSocket(`${protocol}//${host}/ws/logs?password=${password}`);
+    const ws = new WebSocket(`${protocol}//${host}/ws/logs?username=${username}&password=${password}`);
 
     ws.onopen = () => setStatus('connected');
     ws.onclose = () => setStatus('disconnected');

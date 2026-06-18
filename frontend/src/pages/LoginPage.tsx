@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, Terminal, Lock, ChevronRight, Activity, Database, Cpu } from 'lucide-react';
 
-export const LoginPage = ({ onLogin }: { onLogin: (pass: string) => void }) => {
+export const LoginPage = ({ onLogin }: { onLogin: (user: string, pass: string) => void }) => {
+  const [tempUser, setTempUser] = useState('');
   const [tempPass, setTempPass] = useState('');
   const [bootSequence, setBootSequence] = useState<string[]>([]);
   const [isReady, setIsReady] = useState(false);
@@ -31,7 +32,7 @@ export const LoginPage = ({ onLogin }: { onLogin: (pass: string) => void }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (tempPass) onLogin(tempPass);
+    if (tempUser && tempPass) onLogin(tempUser, tempPass);
   };
 
   return (
@@ -64,14 +65,26 @@ export const LoginPage = ({ onLogin }: { onLogin: (pass: string) => void }) => {
           <form onSubmit={handleSubmit} className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-1000">
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Terminal size={14} className="text-blue-900 group-focus-within:text-blue-500 transition-colors" />
+              </div>
+              <input
+                type="text"
+                placeholder="IDENT_ID (USERNAME)..."
+                value={tempUser}
+                onChange={(e) => setTempUser(e.target.value)}
+                autoFocus
+                className="w-full bg-black/50 border border-blue-900/30 rounded pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-blue-500/50 text-blue-100 placeholder:text-blue-900/50 transition-all mb-2"
+              />
+            </div>
+            <div className="relative group">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <Lock size={14} className="text-blue-900 group-focus-within:text-blue-500 transition-colors" />
               </div>
               <input
                 type="password"
-                placeholder="ENTER_AUTHENTICATION_TOKEN..."
+                placeholder="ACCESS_KEY (PASSWORD)..."
                 value={tempPass}
                 onChange={(e) => setTempPass(e.target.value)}
-                autoFocus
                 className="w-full bg-black/50 border border-blue-900/30 rounded pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-blue-500/50 text-blue-100 placeholder:text-blue-900/50 transition-all"
               />
             </div>

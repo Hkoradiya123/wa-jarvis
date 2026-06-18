@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Save, RefreshCw } from 'lucide-react';
 
-export const PromptManager = ({ password }: { password: string }) => {
+export const PromptManager = ({ username, password }: any) => {
   const [prompts, setPrompts] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
@@ -10,7 +10,7 @@ export const PromptManager = ({ password }: { password: string }) => {
     setLoading(true);
     try {
       const res = await fetch('/api/prompts', {
-        headers: { 'X-Password': password }
+        headers: { 'X-Username': username, 'X-Password': password }
       });
       const data = await res.json();
       setPrompts(data);
@@ -26,6 +26,7 @@ export const PromptManager = ({ password }: { password: string }) => {
       await fetch(`/api/prompts/${name}`, {
         method: 'POST',
         headers: { 
+          'X-Username': username,
           'X-Password': password,
           'Content-Type': 'application/json'
         },

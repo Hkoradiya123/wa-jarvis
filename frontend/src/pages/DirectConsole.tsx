@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Send, Terminal } from 'lucide-react';
 
-export const DirectConsole = ({ password }: { password: string }) => {
+export const DirectConsole = ({ username, password }: any) => {
   const [payload, setPayload] = useState(JSON.stringify({
     event: "message",
     data: {
@@ -19,8 +19,6 @@ export const DirectConsole = ({ password }: { password: string }) => {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json'
-          // Webhook itself is NOT password protected per design, 
-          // but we could add it if needed. Design said "api/* and ws/*".
         },
         body: payload
       });
