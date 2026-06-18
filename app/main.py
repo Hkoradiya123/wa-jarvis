@@ -2,6 +2,7 @@ import os
 import json
 import httpx
 import re
+import uuid
 from fastapi import FastAPI, Request, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
@@ -19,7 +20,8 @@ from app.database.mongodb import (
     save_message, get_recent_history, count_messages, delete_oldest_messages,
     get_all_memories, delete_memory, get_all_reminders, update_db_prompt,
     db as mongodb_db, get_user, verify_password, seed_admin, list_users, create_user, delete_user,
-    get_all_conversations, get_conversation_history
+    get_all_conversations, get_conversation_history,
+    get_ai_chat_sessions, get_ai_chat_history, add_ai_chat_message
 )
 from pydantic import BaseModel, Field
 from app.utils.logger import get_logger, log_manager
