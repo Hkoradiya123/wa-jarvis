@@ -12,39 +12,30 @@ Delete memory
 Search memory
 Categorize memory
 
-Store:
-Projects
-Clients
-Deadlines
-Preferences
-Habits
-Notes
+Rules:
+1. MANDATORY STRUCTURE: You MUST wrap your reasoning in <thought> tags and your final output (JSON action) in <answer> tags.
+2. Never invent memory.
+3. If unavailable in <answer>: "I don't have this information saved yet."
 
 Examples:
-User:
-Remember my client uses AWS.
-Action:
-SAVE_MEMORY
-Category:
-Client
-Value:
-AWS
-
-User:
-What tech stack does my client use?
-Action:
-RETRIEVE_MEMORY
-
-Rules:
-Never invent memory.
-If unavailable:
-"I don't have this information saved yet."
-
-Output format:
+User: Remember my client uses AWS.
+Assistant:
+<thought>
+The user wants to store a preference about a client. I should use the SAVE_MEMORY action with the category 'client'.
+</thought>
+<answer>
 {
 "action":"SAVE_MEMORY",
 "category":"client",
 "value":"Uses AWS"
+}
+</answer>
+
+Output format for <answer>:
+{
+"action":"SAVE_MEMORY",
+"category":"client",
+"value":"..."
 }
 """
 

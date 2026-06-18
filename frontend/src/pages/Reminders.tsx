@@ -45,8 +45,12 @@ export const Reminders = ({ password }: { password: string }) => {
                 <td className="py-3 px-4 text-blue-400">{r.task}</td>
                 <td className="py-3 px-4 text-gray-400">{new Date(r.due_date).toLocaleString()}</td>
                 <td className="py-3 px-4">
-                  <span className="px-2 py-0.5 rounded-full bg-blue-900/20 text-blue-500 border border-blue-900/50 text-[10px]">
-                    PENDING
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] border ${
+                    r.status === 'COMPLETED' 
+                      ? 'bg-green-900/20 text-green-500 border-green-900/50' 
+                      : 'bg-blue-900/20 text-blue-500 border-blue-900/50'
+                  }`}>
+                    {r.status || 'PENDING'}
                   </span>
                 </td>
               </tr>

@@ -1,6 +1,6 @@
 # Dashboard Security & Utility Modules Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Secure the dashboard with a password and implement missing Reminders and Direct Console modules.
 
@@ -26,7 +26,7 @@
 - Consumes: `os.getenv("DASHBOARD_PASSWORD")`
 - Produces: Middleware that returns `401` for unauthorized `/api/` or `/ws/` requests.
 
-- [ ] **Step 1: Add JSONResponse import and middleware to app/main.py**
+- [x] **Step 1: Add JSONResponse import and middleware to app/main.py**
 
 ```python
 from fastapi.responses import JSONResponse
@@ -45,19 +45,19 @@ async def dashboard_security(request: Request, call_next):
     return await call_next(request)
 ```
 
-- [ ] **Step 2: Test security with a temporary environment variable**
+- [x] **Step 2: Test security with a temporary environment variable**
 
 Run: `DASHBOARD_PASSWORD=test_pass python -m app.main`
 Test with curl: `curl -I http://localhost:7860/api/memories`
 Expected: `HTTP/1.1 401 Unauthorized`
 
-- [ ] **Step 3: Test security with correct password**
+- [x] **Step 3: Test security with correct password**
 
 Run: `DASHBOARD_PASSWORD=test_pass python -m app.main`
 Test with curl: `curl -I -H "X-Password: test_pass" http://localhost:7860/api/memories`
 Expected: `HTTP/1.1 200 OK`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/main.py
@@ -75,7 +75,7 @@ git commit -m "feat: add dashboard security middleware"
 - Consumes: `localStorage`
 - Produces: `password` state passed to components.
 
-- [ ] **Step 1: Implement password prompt and state in App.tsx**
+- [x] **Step 1: Implement password prompt and state in App.tsx**
 
 ```tsx
 import React, { useState, useEffect } from 'react';
@@ -142,7 +142,7 @@ function App() {
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend/src/App.tsx
@@ -157,7 +157,7 @@ git commit -m "feat: add frontend password guard"
 - Modify: `frontend/src/pages/CommandCenter.tsx`
 - Modify: `frontend/src/pages/MemoryVault.tsx`
 
-- [ ] **Step 1: Update MemoryVault.tsx to use password prop**
+- [x] **Step 1: Update MemoryVault.tsx to use password prop**
 
 ```tsx
 export const MemoryVault = ({ password }: { password: string }) => {
@@ -181,14 +181,14 @@ export const MemoryVault = ({ password }: { password: string }) => {
 }
 ```
 
-- [ ] **Step 2: Update CommandCenter.tsx (WebSockets)**
+- [x] **Step 2: Update CommandCenter.tsx (WebSockets)**
 
 ```tsx
 // Find where WebSocket is initialized
 const ws = new WebSocket(`ws://${window.location.host}/ws/logs?password=${password}`);
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add frontend/src/pages/CommandCenter.tsx frontend/src/pages/MemoryVault.tsx
@@ -202,7 +202,7 @@ git commit -m "feat: integrate password header into existing pages"
 **Files:**
 - Create: `frontend/src/pages/Reminders.tsx`
 
-- [ ] **Step 1: Write Reminders.tsx**
+- [x] **Step 1: Write Reminders.tsx**
 
 ```tsx
 import React, { useEffect, useState } from 'react';
@@ -266,7 +266,7 @@ export const Reminders = ({ password }: { password: string }) => {
 };
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend/src/pages/Reminders.tsx
@@ -280,7 +280,7 @@ git commit -m "feat: implement Reminders UI"
 **Files:**
 - Create: `frontend/src/pages/DirectConsole.tsx`
 
-- [ ] **Step 1: Write DirectConsole.tsx**
+- [x] **Step 1: Write DirectConsole.tsx**
 
 ```tsx
 import React, { useState } from 'react';
@@ -346,7 +346,7 @@ export const DirectConsole = ({ password }: { password: string }) => {
 };
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add frontend/src/pages/DirectConsole.tsx
