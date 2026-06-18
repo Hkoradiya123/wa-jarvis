@@ -107,13 +107,12 @@ async def send_whatsapp_message(to: str, body: str, thought: str = None):
         async with httpx.AsyncClient() as client:
             response = await client.post(url, json=payload, headers=headers)
             if response.status_code in [200, 201]:
-                send_logger.info(f"Message sent to {to}")
                 # Save bot response to history
                 await save_message(to, "assistant", body, thought=thought)
             else:
-                send_logger.error(f"Failed to send: {response.text}")
-    except Exception as e:
-        send_logger.error(f"Error sending: {e}")
+                send_logger.error(f"Failed to send message to {to} (Status: {response.status_code})")
+    except Exception:
+        send_logger.error(f"Error sending message to {to}")
 
 async def process_message(payload: dict):
     if not payload: return
@@ -134,7 +133,6 @@ async def process_message(payload: dict):
     # Check if it's a reply to the bot's message
     elif quoted_msg and quoted_msg.get("fromMe"):
         should_respond = True
-        logger.info(f"User replied to bot message in {sender}")
 
     # If it's a self-message (sent by the user/bot account)
     # we ONLY respond if it has the trigger word OR it's a reply
@@ -240,7 +238,7 @@ async def process_message(payload: dict):
         await send_whatsapp_message(sender, clean_answer, thought=thought)
 
     except Exception as e:
-        logger.error(f"Error processing: {e}", exc_info=True)
+        logger.error("Error processing message", exc_info=True)
         await log_manager.broadcast({
             "type": "error",
             "message": str(e)

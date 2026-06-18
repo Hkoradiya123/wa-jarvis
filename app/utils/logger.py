@@ -30,8 +30,13 @@ class LogManager:
         if websocket in self.active_connections:
             self.active_connections.remove(websocket)
 
-    async def broadcast(self, message: dict):
+    async def broadcast(self, message: dict, console: bool = False):
         msg_str = json.dumps(message)
+
+        # Only print to real terminal if requested (or for errors)
+        if console or message.get("type") == "error":
+            print(f"[{message.get('type', 'INFO')}] {message.get('content', '')}")
+
         disconnected = []
         for connection in self.active_connections:
             try:
