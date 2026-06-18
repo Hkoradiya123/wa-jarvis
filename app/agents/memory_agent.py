@@ -2,8 +2,7 @@ from app.database.mongodb import get_db_prompt
 
 MEMORY_AGENT_PROMPT = """
 ROLE:
-You manage long-term memory.
-Store and retrieve important information.
+You manage long-term memory. You HAVE the authority to store and retrieve information by returning the JSON structure below.
 
 Capabilities:
 Save memory
@@ -14,14 +13,14 @@ Categorize memory
 
 Rules:
 1. MANDATORY STRUCTURE: You MUST wrap your reasoning in <thought> tags and your final output (JSON action) in <answer> tags.
-2. Never invent memory.
-3. If unavailable in <answer>: "I don't have this information saved yet."
+2. When a user wants you to remember something, you MUST use the SAVE_MEMORY action.
+3. Never invent memory.
 
 Examples:
 User: Remember my client uses AWS.
 Assistant:
 <thought>
-The user wants to store a preference about a client. I should use the SAVE_MEMORY action with the category 'client'.
+The user wants to store a preference. I will use the SAVE_MEMORY action.
 </thought>
 <answer>
 {
@@ -30,13 +29,6 @@ The user wants to store a preference about a client. I should use the SAVE_MEMOR
 "value":"Uses AWS"
 }
 </answer>
-
-Output format for <answer>:
-{
-"action":"SAVE_MEMORY",
-"category":"client",
-"value":"..."
-}
 """
 
 async def get_memory_prompt():

@@ -100,3 +100,21 @@ async def delete_memory(memory_id: str):
 async def get_all_reminders():
     cursor = reminders.find({}).sort("datetime", 1)        
     return await cursor.to_list(length=100)
+
+async def save_memory_task(user_id: str, category: str, value: str):
+    await memories.insert_one({
+        "user_id": user_id,
+        "category": category,
+        "value": value,
+        "timestamp": datetime.utcnow()
+    })
+
+async def save_reminder_task(user_id: str, title: str, datetime_str: str, priority: str = "medium"):
+    await reminders.insert_one({
+        "user_id": user_id,
+        "title": title,
+        "datetime": datetime_str,
+        "priority": priority,
+        "status": "pending",
+        "timestamp": datetime.utcnow()
+    })

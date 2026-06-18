@@ -198,6 +198,31 @@ async def send_whatsapp_message(to: str, body: str, thought: str = None):
     except Exception as e:
         send_logger.error(f"Error sending message to {to}: {str(e)}", exc_info=True)
 
+async def execute_agent_action(user_id: str, action_json: str):
+    """
+    Parses the JSON action from an agent and executes the corresponding DB task.
+    Returns a friendly confirmation message.
+    """
+    try:
+        data = json.loads(action_json)
+        action = data.get("action")
+        
+        if action == "SAVE_MEMORY":
+            from app.database.mongodb import save_memory_task
+            await save_memory_task(user_id, data.get("category", "general"), data.get("value", ""))
+            return f"✅ Memory saved: {data.get('value')}"
+            
+        elif action == "CREATE_REMINDER":
+            from app.database.mongodb import save_reminder_task
+            await save_reminder_task(user_id, data.get("title", ""), data.get("datetime", ""), data.get("priority", "medium"))
+            return f"✅ Reminder set: {data.get('title')} for {data.get('datetime')}"
+            
+        # Add more actions as needed
+        
+        return action_json # Fallback to raw if not matched
+    except:
+        return action_json # Fallback if not JSON
+
 async def process_message(payload: dict):
     if not payload: return
     
@@ -305,6 +330,9 @@ async def process_message(payload: dict):
         
         if answer_match:
             clean_answer = answer_match.group(1).strip()
+            # If it's a specialized agent, execute the action
+            if agent_type in ["MEMORY_AGENT", "REMINDER_AGENT", "PLANNER_AGENT"]:
+                clean_answer = await execute_agent_action(sender, clean_answer)
         else:
             # Fallback: remove thought tags if present to keep WhatsApp clean
             clean_answer = re.sub(r'<thought>.*?</thought>', '', response_text, flags=re.DOTALL).strip()
