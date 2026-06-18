@@ -1,7 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Database, Cpu, Globe, RefreshCw, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
 
-export const SystemStatus = ({ username, password }: any) => {
+interface SystemStatusProps {
+  username: string;
+  password?: string;
+}
+
+export const SystemStatus = ({ username, password }: SystemStatusProps) => {
   const [status, setStatus] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 

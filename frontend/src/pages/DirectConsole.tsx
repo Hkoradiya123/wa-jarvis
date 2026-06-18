@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
 import { Send, Terminal } from 'lucide-react';
 
-export const DirectConsole = ({ username, password }: any) => {
+interface DirectConsoleProps {
+  username: string;
+  password?: string;
+}
+
+export const DirectConsole = ({ username, password }: DirectConsoleProps) => {
   const [payload, setPayload] = useState(JSON.stringify({
     event: "message",
     data: {

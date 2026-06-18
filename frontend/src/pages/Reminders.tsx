@@ -1,8 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Clock } from 'lucide-react';
 
-export const Reminders = ({ username, password }: any) => {
-  const [reminders, setReminders] = useState([]);
+interface RemindersProps {
+  username: string;
+  password?: string;
+}
+
+export const Reminders = ({ username, password }: RemindersProps) => {
+  const [reminders, setReminders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchReminders = async () => {

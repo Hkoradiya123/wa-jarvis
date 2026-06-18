@@ -1,7 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Save, RefreshCw } from 'lucide-react';
 
-export const PromptManager = ({ username, password }: any) => {
+interface PromptManagerProps {
+  username: string;
+  password?: string;
+}
+
+export const PromptManager = ({ username, password }: PromptManagerProps) => {
   const [prompts, setPrompts] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);

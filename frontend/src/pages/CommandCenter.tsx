@@ -10,7 +10,14 @@ interface LogEntry {
   timestamp: string;
 }
 
-export const CommandCenter = ({ username, password, logs, wsStatus }: any) => {
+interface CommandCenterProps {
+  username: string;
+  password?: string;
+  logs: LogEntry[];
+  wsStatus: 'connected' | 'disconnected' | 'connecting';
+}
+
+export const CommandCenter = ({ username, password, logs, wsStatus }: CommandCenterProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -99,7 +106,7 @@ export const CommandCenter = ({ username, password, logs, wsStatus }: any) => {
             <div className="text-xs uppercase tracking-widest">Awaiting system events...</div>
           </div>
         ) : (
-          logs.map((log, i) => renderLog(log, i))
+          logs.map((log: LogEntry, i: number) => renderLog(log, i))
         )}
       </div>
 

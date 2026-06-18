@@ -1,7 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Users, UserPlus, Trash2, Shield, RefreshCw } from 'lucide-react';
 
-export const UserManagement = ({ username, password }: any) => {
+interface UserManagementProps {
+  username: string;
+  password?: string;
+}
+
+export const UserManagement = ({ username, password }: UserManagementProps) => {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [newUser, setNewUser] = useState({ username: '', password: '', role: 'user' });
@@ -98,7 +103,7 @@ export const UserManagement = ({ username, password }: any) => {
               </tr>
             </thead>
             <tbody>
-              {users.map((u) => (
+              {users.map((u: any) => (
                 <tr key={u.username} className="border-b border-gray-900 hover:bg-gray-800/30 transition-colors">
                   <td className="py-3 px-4 font-bold text-blue-400">{u.username}</td>
                   <td className="py-3 px-4">

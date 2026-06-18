@@ -1,8 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Trash2, Search } from 'lucide-react';
 
-export const MemoryVault = ({ username, password }: any) => {
-  const [memories, setMemories] = useState([]);
+interface MemoryVaultProps {
+  username: string;
+  password?: string;
+}
+
+export const MemoryVault = ({ username, password }: MemoryVaultProps) => {
+  const [memories, setMemories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchMemories = async () => {

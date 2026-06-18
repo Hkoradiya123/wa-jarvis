@@ -1,7 +1,13 @@
 import React from 'react';
 import { Sidebar } from './Sidebar';
 
-export const Layout = ({ children, activeTab, setActiveTab }: any) => (
+interface LayoutProps {
+  children: React.ReactNode;
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
+}
+
+export const Layout = ({ children, activeTab, setActiveTab }: LayoutProps) => (
   <div className="flex h-screen overflow-hidden">
     <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
     <main className="flex-1 overflow-auto bg-[#0d1117]">

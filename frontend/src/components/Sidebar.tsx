@@ -11,7 +11,12 @@ const navItems = [
   { id: 'console', label: 'DIRECT_CONSOLE', icon: Terminal },
 ];
 
-export const Sidebar = ({ activeTab, setActiveTab }: any) => (
+interface SidebarProps {
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
+}
+
+export const Sidebar = ({ activeTab, setActiveTab }: SidebarProps) => (
   <div className="w-64 border-r border-gray-800 h-screen flex flex-col bg-[#0d1117]">
     <div className="p-4 border-b border-gray-800 font-bold text-sm tracking-widest text-blue-400">
       JARVIS_OS
