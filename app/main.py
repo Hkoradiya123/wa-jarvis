@@ -156,14 +156,19 @@ async def get_system_status():
 
     # Check gateway
     try:
-        async with httpx.AsyncClient() as client:
-            res = await client.get(os.getenv("OPENWA_API_URL", "http://localhost:2785"), timeout=2.0)
+        base_url = os.getenv("OPENWA_API_URL", "http://localhost:2785").strip().rstrip("/")
+        if not base_url.startswith("http"):
+            base_url = f"https://{base_url}"
+            
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            res = await client.get(base_url, timeout=5.0)
             if res.status_code < 500:
                 status["openwa_gateway"] = "online"
             else:
                 status["openwa_gateway"] = f"error_{res.status_code}"
-    except Exception:
-        status["openwa_gateway"] = "offline"
+    except Exception as e:
+        status["openwa_gateway"] = f"offline"
+        logger.debug(f"Status check failed for {base_url}: {e}")
     
     return status
 
