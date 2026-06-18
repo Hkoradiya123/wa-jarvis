@@ -3,7 +3,7 @@ import httpx
 from dotenv import load_dotenv
 from app.utils.logger import get_logger
 
-load_dotenv()
+load_dotenv(override=True)
 logger = get_logger("llm")
 
 NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY")

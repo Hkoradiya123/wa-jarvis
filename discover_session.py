@@ -3,7 +3,7 @@ import httpx
 import asyncio
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 OPENWA_API_URL = os.getenv("OPENWA_API_URL", "http://localhost:2785")
 OPENWA_API_KEY = os.getenv("OPENWA_API_KEY", "dev-admin-key")

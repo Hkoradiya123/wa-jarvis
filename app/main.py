@@ -22,7 +22,7 @@ from pydantic import BaseModel, Field
 from app.utils.logger import get_logger, log_manager
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 app = FastAPI()
 
@@ -153,21 +153,25 @@ async def send_whatsapp_message(to: str, body: str, thought: str = None):
     current_api_url = os.getenv("OPENWA_API_URL", OPENWA_API_URL)
     current_api_key = os.getenv("OPENWA_API_KEY", OPENWA_API_KEY)
 
-    url = f"{current_api_url}/api/sessions/{current_session}/messages/send-text"
+    # Clean up URL to avoid double slashes
+    base_url = current_api_url.rstrip("/")
+    url = f"{base_url}/api/sessions/{current_session}/messages/send-text"
     headers = {"Authorization": f"Bearer {current_api_key}"}
     payload = {"chatId": to, "text": body}
     
     send_logger = get_logger("whatsapp_send")
+    send_logger.info(f"Sending message to {to} via {url}")
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(follow_redirects=True) as client:
             response = await client.post(url, json=payload, headers=headers)
             if response.status_code in [200, 201]:
                 # Save bot response to history
                 await save_message(to, "assistant", body, thought=thought)
             else:
                 send_logger.error(f"Failed to send message to {to} (Status: {response.status_code})")
-    except Exception:
-        send_logger.error(f"Error sending message to {to}")
+                send_logger.error(f"Response: {response.text}")
+    except Exception as e:
+        send_logger.error(f"Error sending message to {to}: {str(e)}", exc_info=True)
 
 async def process_message(payload: dict):
     if not payload: return

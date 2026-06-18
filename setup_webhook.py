@@ -3,18 +3,18 @@ import httpx
 import asyncio
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 OPENWA_API_URL = os.getenv("OPENWA_API_URL", "http://localhost:2785")
 OPENWA_API_KEY = os.getenv("OPENWA_API_KEY")
 SESSION_ID = os.getenv("SESSION_ID", "default")
-WEBHOOK_URL = "http://127.0.0.1:8000/webhook"
+WEBHOOK_URL = os.getenv("WEBHOOK_URL", "http://127.0.0.1:8000/webhook")
 
 async def setup_webhook():
     """
     Registers the FastAPI webhook URL with the Open-WA gateway using authentication.
     """
-    url = f"{OPENWA_API_URL}/api/sessions/{SESSION_ID}/webhooks"
+    url = f"{OPENWA_API_URL.rstrip('/')}/api/sessions/{SESSION_ID}/webhooks"
     
     # We must include the API key in the headers
     headers = {
@@ -27,6 +27,7 @@ async def setup_webhook():
     }
     
     print(f"Connecting to Open-WA at: {OPENWA_API_URL}")
+    print(f"Registering Webhook: {WEBHOOK_URL}")
     print(f"Using API Key: {OPENWA_API_KEY[:5]}...{OPENWA_API_KEY[-5:] if OPENWA_API_KEY else ''}")
     
     async with httpx.AsyncClient() as client:
