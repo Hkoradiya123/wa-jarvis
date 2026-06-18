@@ -313,7 +313,11 @@ async def websocket_endpoint(websocket: WebSocket):
 
 @app.post("/webhook")
 async def whatsapp_webhook(request: Request, background_tasks: BackgroundTasks):
-    data = await request.json()
+    try:
+        data = await request.json()
+    except Exception:
+        return JSONResponse(status_code=400, content={"detail": "Invalid JSON payload"})
+        
     event = data.get("event")
     payload = data.get("data") or data.get("payload")
     if event in ["message", "message.received", "message.sent"] and payload:
