@@ -20,12 +20,16 @@ If the user wants to save, retrieve or update information -> MEMORY_AGENT
 If the user wants reminders, alarms or recurring notifications -> REMINDER_AGENT
 If the user wants schedules, priorities or planning -> PLANNER_AGENT
 If the user asks about current events, news, or something that requires searching the internet -> SEARCH_AGENT
+If the user is confirming or following through on a suggestion to search the internet (e.g., "yes", "do it", "go ahead", "search it") -> SEARCH_AGENT
 
 Examples:
 "What's FastAPI?"
 AI_AGENT
 
 "Who won the match yesterday?"
+SEARCH_AGENT
+
+"Yes, search it"
 SEARCH_AGENT
 
 "What's the weather in Tokyo?"

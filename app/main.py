@@ -301,7 +301,9 @@ async def process_message(payload: dict):
 
         # 4. Routing
         router_prompt = await get_router_prompt() + "\nReturn only valid JSON."
-        router_raw = await call_llm([{"role": "system", "content": router_prompt}, {"role": "user", "content": clean_query}], max_tokens=200)
+        # Give router some context from history for better classification
+        routing_messages = [{"role": "system", "content": router_prompt}] + context_messages[-3:] + [{"role": "user", "content": clean_query}]
+        router_raw = await call_llm(routing_messages, max_tokens=200)
         
         # Clean JSON
         router_clean = router_raw.strip()
