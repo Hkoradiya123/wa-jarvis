@@ -29,6 +29,27 @@ app = FastAPI()
 @app.on_event("startup")
 async def startup_event():
     await seed_admin()
+    # Try to discover active session automatically
+    global SESSION_ID
+    try:
+        base_url = OPENWA_API_URL.strip().rstrip("/")
+        if not base_url.startswith("http"):
+            base_url = f"https://{base_url}"
+            
+        url = f"{base_url}/api/sessions"
+        headers = {"Authorization": f"Bearer {OPENWA_API_KEY}"}
+        
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            response = await client.get(url, headers=headers, timeout=10.0)
+            if response.status_code == 200:
+                sessions = response.json()
+                for s in sessions:
+                    if s.get("status") in ["CONNECTED", "ready"]:
+                        SESSION_ID = s.get("id")
+                        logger.info(f"✅ Auto-discovered active session: {SESSION_ID}")
+                        break
+    except Exception as e:
+        logger.warning(f"⚠️ Could not auto-discover session: {e}")
 
 logger = get_logger("main")
 
