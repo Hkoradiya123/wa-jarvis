@@ -1,7 +1,7 @@
 import os
 from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timezone
 
 load_dotenv()
 
@@ -34,7 +34,7 @@ async def create_user(username: str, password: str, role: str = "user"):
         "username": username,
         "password": hashed,
         "role": role,
-        "created_at": datetime.utcnow()
+        "created_at": datetime.now(timezone.utc)
     })
 
 async def list_users():
@@ -67,7 +67,7 @@ async def save_message(user_id: str, role: str, content: str, thought: str = Non
         "user_id": user_id,
         "role": role,
         "content": content,
-        "timestamp": datetime.utcnow()
+        "timestamp": datetime.now(timezone.utc)
     }
     if thought:
         doc["thought"] = thought
@@ -106,7 +106,7 @@ async def save_memory_task(user_id: str, category: str, value: str):
         "user_id": user_id,
         "category": category,
         "value": value,
-        "timestamp": datetime.utcnow()
+        "timestamp": datetime.now(timezone.utc)
     })
 
 async def save_reminder_task(user_id: str, title: str, datetime_str: str, priority: str = "medium"):
@@ -116,5 +116,5 @@ async def save_reminder_task(user_id: str, title: str, datetime_str: str, priori
         "datetime": datetime_str,
         "priority": priority,
         "status": "pending",
-        "timestamp": datetime.utcnow()
+        "timestamp": datetime.now(timezone.utc)
     })
