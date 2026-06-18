@@ -217,6 +217,12 @@ async def execute_agent_action(user_id: str, action_json: str):
             await save_reminder_task(user_id, data.get("title", ""), data.get("datetime", ""), data.get("priority", "medium"))
             return f"✅ Reminder set: {data.get('title')} for {data.get('datetime')}"
             
+        elif action == "CREATE_PLAN":
+            items = data.get("items", [])
+            plan_text = f"📅 *YOUR {data.get('type', 'DAILY').upper()} PLAN*\n\n"
+            plan_text += "\n".join([f"• {item}" for item in items])
+            return plan_text
+            
         # Add more actions as needed
         
         return action_json # Fallback to raw if not matched
