@@ -1,8 +1,9 @@
 import React from 'react';
-import { Terminal, Database, Clock, Activity, Settings, Shield, Users, MessageSquare } from 'lucide-react';
+import { Terminal, Database, Clock, Activity, Settings, Shield, Users, MessageSquare, Bot } from 'lucide-react';
 
 const navItems = [
   { id: 'logs', label: 'LIVE_LOGS', icon: Activity },
+  { id: 'ai-chat', label: 'AI_CHAT', icon: Bot },
   { id: 'conversations', label: 'CONVERSATIONS', icon: MessageSquare },
   { id: 'memory', label: 'MEMORY_VAULT', icon: Database },
   { id: 'reminders', label: 'REMINDERS', icon: Clock },

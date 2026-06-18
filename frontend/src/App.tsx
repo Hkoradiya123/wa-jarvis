@@ -9,6 +9,7 @@ import { SystemStatus } from './pages/SystemStatus';
 import { UserManagement } from './pages/UserManagement';
 import { LoginPage } from './pages/LoginPage';
 import { Conversations } from './pages/Conversations';
+import { AIChat } from './pages/AIChat';
 
 interface LogEntry {
   type: string;
@@ -92,12 +93,11 @@ function App() {
         {activeTab === 'prompts' && <PromptManager {...authProps} />}
         {activeTab === 'status' && <SystemStatus {...authProps} />}
         {activeTab === 'users' && <UserManagement {...authProps} />}
+        {activeTab === 'conversations' && <Conversations {...authProps} />}
+        {activeTab === 'ai-chat' && <AIChat {...authProps} />}
       </div>
     </Layout>
   );
 }
 
 export default App;
-
-port default App;
-

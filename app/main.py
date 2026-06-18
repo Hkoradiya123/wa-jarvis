@@ -400,6 +400,56 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception:
         log_manager.disconnect(websocket)
 
+
+async def get_ai_response(user_id: str, query: str):
+    """
+    A stateless function to get a direct response from the AI logic.
+    This reuses the core agent routing and execution flow without saving to the database.
+    """
+    # Use a generic history for stateless chat, or fetch a user-specific one if needed
+    history = await get_recent_history(user_id, limit=5)
+    context_messages = [{"role": h["role"], "content": h["content"]} for h in history]
+
+    # 1. Routing
+    router_prompt = await get_router_prompt() + "\nReturn only valid JSON."
+    routing_messages = [{"role": "system", "content": router_prompt}] + context_messages[-3:] + [{"role": "user", "content": query}]
+    router_raw = await call_llm(routing_messages, max_tokens=200)
+    
+    try:
+        agent_type = json.loads(router_raw.strip().split("```")[1].replace("json", "").strip()).get("agent", "AI_AGENT")
+    except:
+        agent_type = "AI_AGENT"
+
+    # 2. Specialized Agent Logic
+    system_prompt = get_global_rules() + "\n"
+    if agent_type == "AI_AGENT": system_prompt += await get_ai_prompt()
+    # ... (add other agents as needed, similar to process_message)
+    else: system_prompt += await get_ai_prompt()
+
+    # 3. Get Response
+    final_messages = [{"role": "system", "content": system_prompt}] + context_messages + [{"role": "user", "content": query}]
+    response_text = await call_llm(final_messages)
+    
+    # 4. Extract Answer
+    answer_match = re.search(r'<answer>(.*?)</answer>', response_text, re.DOTALL)
+    if answer_match:
+        return answer_match.group(1).strip()
+    else:
+        return re.sub(r'<thought>.*?</thought>', '', response_text, flags=re.DOTALL).strip()
+
+class ChatMessage(BaseModel):
+    message: str
+
+@app.post("/api/chat")
+async def handle_chat(request: Request, chat_message: ChatMessage):
+    # Get user from the request state, which is populated by the middleware
+    user = request.state.user
+    user_id = user.get("username", "direct_chat_user")
+    
+    response = await get_ai_response(user_id, chat_message.message)
+    return {"response": response}
+
+
 @app.post("/webhook")
 async def whatsapp_webhook(request: Request, background_tasks: BackgroundTasks):
     try:
