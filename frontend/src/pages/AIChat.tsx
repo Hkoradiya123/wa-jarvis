@@ -35,8 +35,7 @@ const CodeBlock = ({ node, inline, className, children, ...props }: any) => {
         </button>
       </div>
       <SyntaxHighlighter style={vscDarkPlus} language={match[1]} PreTag="div" {...props}>
-        {String(children).replace(/
-$/, '')}
+        {String(children).trimEnd()}
       </SyntaxHighlighter>
     </div>
   ) : (
