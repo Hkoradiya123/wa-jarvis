@@ -3,7 +3,7 @@ import { Save, RefreshCw } from 'lucide-react';
 
 interface PromptManagerProps {
   username: string;
-  password?: string;
+  password: string;
 }
 
 export const PromptManager = ({ username, password }: PromptManagerProps) => {

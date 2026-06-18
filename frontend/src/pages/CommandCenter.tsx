@@ -12,7 +12,7 @@ interface LogEntry {
 
 interface CommandCenterProps {
   username: string;
-  password?: string;
+  password: string;
   logs: LogEntry[];
   wsStatus: 'connected' | 'disconnected' | 'connecting';
 }

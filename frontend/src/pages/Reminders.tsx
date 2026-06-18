@@ -3,7 +3,7 @@ import { Clock } from 'lucide-react';
 
 interface RemindersProps {
   username: string;
-  password?: string;
+  password: string;
 }
 
 export const Reminders = ({ username, password }: RemindersProps) => {

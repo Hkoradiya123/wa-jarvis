@@ -3,7 +3,7 @@ import { Users, UserPlus, Trash2, Shield, RefreshCw } from 'lucide-react';
 
 interface UserManagementProps {
   username: string;
-  password?: string;
+  password: string;
 }
 
 export const UserManagement = ({ username, password }: UserManagementProps) => {

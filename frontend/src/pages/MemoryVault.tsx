@@ -3,7 +3,7 @@ import { Trash2, Search } from 'lucide-react';
 
 interface MemoryVaultProps {
   username: string;
-  password?: string;
+  password: string;
 }
 
 export const MemoryVault = ({ username, password }: MemoryVaultProps) => {

@@ -3,7 +3,7 @@ import { Database, Cpu, Globe, RefreshCw, AlertTriangle, CheckCircle2, XCircle }
 
 interface SystemStatusProps {
   username: string;
-  password?: string;
+  password: string;
 }
 
 export const SystemStatus = ({ username, password }: SystemStatusProps) => {

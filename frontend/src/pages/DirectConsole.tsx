@@ -3,7 +3,7 @@ import { Send, Terminal } from 'lucide-react';
 
 interface DirectConsoleProps {
   username: string;
-  password?: string;
+  password: string;
 }
 
 export const DirectConsole = ({ username, password }: DirectConsoleProps) => {
