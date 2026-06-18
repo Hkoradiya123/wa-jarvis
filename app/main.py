@@ -12,6 +12,8 @@ from app.agents.memory_agent import get_memory_prompt
 from app.agents.reminder_agent import get_reminder_prompt
 from app.agents.planner_agent import get_planner_prompt
 from app.agents.summarizer_agent import get_summarizer_prompt
+from app.agents.search_agent import get_search_prompt
+from app.utils.mcp_tools import search_and_summarize
 from app.agents.base import get_global_rules
 from app.database.mongodb import (
     save_message, get_recent_history, count_messages, delete_oldest_messages,
@@ -126,7 +128,8 @@ async def list_prompts():
         "REMINDER_AGENT": await get_reminder_prompt(),
         "PLANNER_AGENT": await get_planner_prompt(),
         "SUMMARIZER_AGENT": await get_summarizer_prompt(),
-        "ROUTER_AGENT": await get_router_prompt()
+        "ROUTER_AGENT": await get_router_prompt(),
+        "SEARCH_AGENT": await get_search_prompt()
     }
     return all_prompts
 
@@ -321,12 +324,22 @@ async def process_message(payload: dict):
         elif agent_type == "MEMORY_AGENT": system_prompt += await get_memory_prompt()
         elif agent_type == "REMINDER_AGENT": system_prompt += await get_reminder_prompt()
         elif agent_type == "PLANNER_AGENT": system_prompt += await get_planner_prompt()
+        elif agent_type == "SEARCH_AGENT":
+            # --- SEARCH AGENT SPECIAL FLOW ---
+            await log_manager.broadcast({"type": "thought", "content": "Performing internet search..."})
+            search_data = await search_and_summarize(clean_query)
+            search_prompt = await get_search_prompt()
+            system_prompt = get_global_rules() + "\n" + search_prompt.format(query=clean_query, data=search_data)
+            # Re-call LLM with search data
+            final_messages = [{"role": "system", "content": system_prompt}] + context_messages
+            response_text = await call_llm(final_messages)
+            # ---------------------------------
         else: system_prompt += await get_ai_prompt()
 
-        # Combine System Prompt + History
-        final_messages = [{"role": "system", "content": system_prompt}] + context_messages
-        
-        response_text = await call_llm(final_messages)
+        if agent_type != "SEARCH_AGENT":
+            # Combine System Prompt + History
+            final_messages = [{"role": "system", "content": system_prompt}] + context_messages
+            response_text = await call_llm(final_messages)
         
         # 6. Extract Thought and Answer
         thought_match = re.search(r'<thought>(.*?)</thought>', response_text, re.DOTALL)

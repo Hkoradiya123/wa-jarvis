@@ -12,16 +12,24 @@ AI_AGENT
 MEMORY_AGENT
 REMINDER_AGENT
 PLANNER_AGENT
+SEARCH_AGENT
 
 Rules:
 If the user wants general conversation or knowledge -> AI_AGENT
 If the user wants to save, retrieve or update information -> MEMORY_AGENT
 If the user wants reminders, alarms or recurring notifications -> REMINDER_AGENT
 If the user wants schedules, priorities or planning -> PLANNER_AGENT
+If the user asks about current events, news, or something that requires searching the internet -> SEARCH_AGENT
 
 Examples:
 "What's FastAPI?"
 AI_AGENT
+
+"Who won the match yesterday?"
+SEARCH_AGENT
+
+"What's the weather in Tokyo?"
+SEARCH_AGENT
 
 "Remember my client prefers Python"
 MEMORY_AGENT

@@ -9,3 +9,6 @@ motor
 aiofiles
 passlib[bcrypt]
 bcrypt==3.2.0
+mcp
+duckduckgo-search
+trafilatura
