@@ -13,10 +13,11 @@ from app.agents.summarizer_agent import get_summarizer_prompt
 from app.agents.registry import get_agent_prompt
 from app.utils.mcp_tools import search_and_summarize
 from app.agents.base import get_global_rules
+from app.database import mongodb
 from app.database.mongodb import (
     save_message, get_recent_history, count_messages, delete_oldest_messages,
     get_all_memories, delete_memory, get_all_reminders, update_db_prompt,
-    db as mongodb_db, get_user, verify_password, seed_admin, list_users, create_user, delete_user,
+    get_user, verify_password, seed_admin, list_users, create_user, delete_user,
     get_all_conversations, get_conversation_history,
     get_ai_chat_sessions, get_ai_chat_history, add_ai_chat_message, init_db_indexes,
     get_relevant_memories
@@ -61,7 +62,7 @@ async def check_reminders_loop():
     logger.info("⏰ Background reminder scheduler started.")
     while True:
         try:
-            cursor = mongodb_db.reminders.find({"status": "pending"})
+            cursor = mongodb.db.reminders.find({"status": "pending"})
             pending_reminders = await cursor.to_list(length=100)
             now = datetime.now()
             
@@ -77,7 +78,7 @@ async def check_reminders_loop():
                         logger.info(f"Triggering reminder: '{title}' for user: {user_id}")
                         await send_whatsapp_message(user_id, msg_body)
                         
-                        await mongodb_db.reminders.update_one(
+                        await mongodb.db.reminders.update_one(
                             {"_id": reminder["_id"]},
                             {"$set": {"status": "sent", "triggered_at": datetime.now(timezone.utc)}}
                         )
@@ -217,7 +218,7 @@ async def get_system_status():
     }
     # Check MongoDB
     try:
-        await mongodb_db.command("ping")
+        await mongodb.db.command("ping")
     except Exception:
         status["mongodb"] = "offline"
 

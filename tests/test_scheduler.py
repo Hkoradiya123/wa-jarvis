@@ -2,7 +2,7 @@ import pytest
 from datetime import datetime, timedelta
 from app.utils.datetime_parser import parse_datetime
 from app.main import check_reminders_loop, send_whatsapp_message
-from app.database.mongodb import reminders
+from app.database import mongodb
 from unittest.mock import patch, AsyncMock
 import asyncio
 
@@ -25,19 +25,23 @@ def test_parse_datetime_relative():
 
 @pytest.mark.asyncio
 async def test_check_reminders_loop_trigger():
+    # Clean database before run
+    await mongodb.reminders.delete_many({})
+    
     # Add a mock reminder that is due
     user_id = "test_user_scheduler"
     title = "Buy milk"
     
     # Insert pending reminder with datetime in the past
     past_time_str = (datetime.now() - timedelta(minutes=5)).strftime("%Y-%m-%d %H:%M:%S")
-    reminder_id = await reminders.insert_one({
+    reminder_id = await mongodb.reminders.insert_one({
         "user_id": user_id,
         "title": title,
         "datetime": past_time_str,
         "priority": "high",
         "status": "pending"
     })
+
     
     # Mock send_whatsapp_message
     with patch("app.main.send_whatsapp_message", new_callable=AsyncMock) as mock_send:
@@ -55,8 +59,9 @@ async def test_check_reminders_loop_trigger():
         assert "Buy milk" in mock_send.call_args[0][1]
         
         # Verify status in database is now 'sent'
-        updated = await reminders.find_one({"_id": reminder_id.inserted_id})
+        updated = await mongodb.reminders.find_one({"_id": reminder_id.inserted_id})
         assert updated["status"] == "sent"
         
     # Clean up
-    await reminders.delete_many({"user_id": user_id})
+    await mongodb.reminders.delete_many({"user_id": user_id})
+

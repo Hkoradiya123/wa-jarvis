@@ -1,5 +1,6 @@
 import pytest
 import json
+import uuid
 from app.main import process_message, estimate_tokens
 from unittest.mock import patch, AsyncMock
 
@@ -10,9 +11,10 @@ def test_estimate_tokens():
 
 @pytest.mark.asyncio
 async def test_process_message_logging():
+    msg_id = f"test_msg_obs_{uuid.uuid4()}"
     payload = {
-        "id": "test_msg_obs_123",
-        "body": "//jarvis hello",
+        "id": msg_id,
+        "body": "//jarvis explain Docker",
         "from": "test_user_obs",
         "fromMe": False
     }
@@ -34,8 +36,9 @@ async def test_process_message_logging():
             
             log_data = json.loads(log_calls[0])
             assert log_data["event"] == "message_processed"
-            assert log_data["request_id"] == "test_msg_obs_123"
+            assert log_data["request_id"] == msg_id
             assert log_data["agent_type"] == "AI_AGENT"
             assert log_data["latency_ms"] >= 0
             assert log_data["input_tokens"] > 0
             assert log_data["output_tokens"] > 0
+

@@ -1,31 +1,40 @@
 import httpx
 import pytest
-import os
-from dotenv import load_dotenv
+import pytest_asyncio
+from app.main import app
+from app.database import mongodb
 
-load_dotenv()
+@pytest_asyncio.fixture(autouse=True)
+async def seed_test_admin():
+    await mongodb.seed_admin()
 
-BASE_URL = "http://localhost:7860"
-PASSWORD = os.getenv("DASHBOARD_PASSWORD", "testpassword")
+
+HEADERS = {
+    "X-Username": "admin",
+    "X-Password": "Hkoradiya.jarvis"
+}
 
 @pytest.mark.asyncio
 async def test_get_prompts_exists():
-    async with httpx.AsyncClient() as client:
-        response = await client.get(f"{BASE_URL}/api/prompts", headers={"X-Password": PASSWORD})
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://testserver") as client:
+        response = await client.get("/api/prompts", headers=HEADERS)
         assert response.status_code == 200
 
 @pytest.mark.asyncio
 async def test_post_prompt_exists():
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://testserver") as client:
         response = await client.post(
-            f"{BASE_URL}/api/prompts/AI_AGENT", 
+            "/api/prompts/TEST_AGENT", 
             json={"content": "test prompt"},
-            headers={"X-Password": PASSWORD}
+            headers=HEADERS
         )
         assert response.status_code == 200
 
+
 @pytest.mark.asyncio
 async def test_system_status_exists():
-    async with httpx.AsyncClient() as client:
-        response = await client.get(f"{BASE_URL}/api/system/status", headers={"X-Password": PASSWORD})
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://testserver") as client:
+        response = await client.get("/api/system/status", headers=HEADERS)
         assert response.status_code == 200
+
+

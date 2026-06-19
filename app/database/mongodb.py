@@ -17,14 +17,18 @@ prompts = db.prompts
 users = db.users
 ai_chats = db.ai_chats
 
-from passlib.context import CryptContext
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+import bcrypt
 
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    try:
+        return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
+    except Exception:
+        return False
 
-def get_password_hash(password):
-    return pwd_context.hash(password)
+def get_password_hash(password: str) -> str:
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
+
 
 async def get_user(username: str):
     return await users.find_one({"username": username})
@@ -87,20 +91,20 @@ async def save_message(user_id: str, role: str, content: str, thought: str = Non
 
 
 async def get_recent_history(user_id: str, limit: int = 15):
-    cursor = conversations.find({"user_id": user_id}).sort("timestamp", -1).limit(limit)
+    cursor = conversations.find({"user_id": user_id, "archived": {"$ne": True}}).sort("timestamp", -1).limit(limit)
     history = await cursor.to_list(length=limit)
     return history[::-1]
 
 async def count_messages(user_id: str):
-    return await conversations.count_documents({"user_id": user_id})
+    return await conversations.count_documents({"user_id": user_id, "archived": {"$ne": True}})
 
 async def delete_oldest_messages(user_id: str, count: int):
-    # Find IDs of oldest messages
-    cursor = conversations.find({"user_id": user_id}).sort("timestamp", 1).limit(count)
+    # Soft delete: Find IDs of oldest active messages and mark them as archived
+    cursor = conversations.find({"user_id": user_id, "archived": {"$ne": True}}).sort("timestamp", 1).limit(count)
     old_msgs = await cursor.to_list(length=count)
     ids = [m["_id"] for m in old_msgs]
     if ids:
-        await conversations.delete_many({"_id": {"$in": ids}})
+        await conversations.update_many({"_id": {"$in": ids}}, {"$set": {"archived": True}})
 
 async def get_all_memories():
     cursor = memories.find({}).sort("timestamp", -1)       
