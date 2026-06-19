@@ -21,7 +21,7 @@ from app.database.mongodb import (
     get_all_memories, delete_memory, get_all_reminders, update_db_prompt,
     db as mongodb_db, get_user, verify_password, seed_admin, list_users, create_user, delete_user,
     get_all_conversations, get_conversation_history,
-    get_ai_chat_sessions, get_ai_chat_history, add_ai_chat_message
+    get_ai_chat_sessions, get_ai_chat_history, add_ai_chat_message, init_db_indexes
 )
 from pydantic import BaseModel, Field
 from app.utils.logger import get_logger, log_manager
@@ -33,6 +33,7 @@ app = FastAPI()
 
 @app.on_event("startup")
 async def startup_event():
+    await init_db_indexes()
     await seed_admin()
     # Try to discover active session automatically
     global SESSION_ID
@@ -248,6 +249,7 @@ async def execute_agent_action(user_id: str, action_json: str):
 async def process_message(payload: dict):
     if not payload: return
     
+    message_id = payload.get("id")
     body = payload.get("body", "").strip()
     sender = payload.get("from", "")
     is_self = payload.get("fromMe", False)
@@ -281,7 +283,11 @@ async def process_message(payload: dict):
         return
 
     # 2. Save user message to history
-    await save_message(sender, "user", clean_query)
+    saved = await save_message(sender, "user", clean_query, message_id=message_id)
+    if not saved:
+        logger.info(f"Duplicate message detected: {message_id}. Skipping processing.")
+        return
+
     
     await log_manager.broadcast({
         "type": "incoming_message",

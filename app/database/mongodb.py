@@ -63,7 +63,12 @@ async def update_db_prompt(name: str, content: str):
         upsert=True
     )
 
-async def save_message(user_id: str, role: str, content: str, thought: str = None):
+from pymongo.errors import DuplicateKeyError
+
+async def init_db_indexes():
+    await conversations.create_index("message_id", unique=True, sparse=True)
+
+async def save_message(user_id: str, role: str, content: str, thought: str = None, message_id: str = None):
     doc = {
         "user_id": user_id,
         "role": role,
@@ -72,7 +77,14 @@ async def save_message(user_id: str, role: str, content: str, thought: str = Non
     }
     if thought:
         doc["thought"] = thought
-    await conversations.insert_one(doc)
+    if message_id:
+        doc["message_id"] = message_id
+    try:
+        await conversations.insert_one(doc)
+        return True
+    except DuplicateKeyError:
+        return False
+
 
 async def get_recent_history(user_id: str, limit: int = 15):
     cursor = conversations.find({"user_id": user_id}).sort("timestamp", -1).limit(limit)
