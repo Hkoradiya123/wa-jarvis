@@ -347,6 +347,9 @@ async def process_message(payload: dict):
             search_query_prompt = (
                 "You are a search query optimizer. Given the conversation history and the user's latest message, "
                 "generate a single, concise search query (in English) to find the relevant information. "
+                "CRITICAL: Avoid using the word 'current' for prices, rates, or news as it confuses search engines "
+                "with 'electric current'. Use 'today', 'latest', or 'live' instead (e.g., use 'gold price today Mumbai' "
+                "instead of 'current gold price in Mumbai'). "
                 "If the latest message is a confirmation (e.g. 'yes', 'do it', 'go ahead') to a search suggested by the assistant, "
                 "formulate the query based on the topic the assistant offered to look up. "
                 "Only return the search query itself, nothing else. No quotes, no markdown, no tags."
