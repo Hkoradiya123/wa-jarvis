@@ -30,11 +30,49 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 app = FastAPI()
+logger = get_logger("main")
+
+from datetime import datetime, timezone
+import asyncio
+from app.utils.datetime_parser import parse_datetime
+
+async def check_reminders_loop():
+    logger.info("⏰ Background reminder scheduler started.")
+    while True:
+        try:
+            cursor = mongodb_db.reminders.find({"status": "pending"})
+            pending_reminders = await cursor.to_list(length=100)
+            now = datetime.now()
+            
+            for reminder in pending_reminders:
+                try:
+                    rem_time = parse_datetime(reminder.get("datetime"))
+                    if rem_time <= now:
+                        user_id = reminder.get("user_id")
+                        title = reminder.get("title")
+                        priority = reminder.get("priority", "medium")
+                        
+                        msg_body = f"⏰ *REMINDER:* {title}\n(Priority: {priority.upper()})"
+                        logger.info(f"Triggering reminder: '{title}' for user: {user_id}")
+                        await send_whatsapp_message(user_id, msg_body)
+                        
+                        await mongodb_db.reminders.update_one(
+                            {"_id": reminder["_id"]},
+                            {"$set": {"status": "sent", "triggered_at": datetime.now(timezone.utc)}}
+                        )
+                except Exception as e:
+                    logger.error(f"Error processing reminder {reminder.get('_id')}: {e}")
+        except Exception as e:
+            logger.error(f"Error in check_reminders_loop: {e}")
+            
+        await asyncio.sleep(30)
 
 @app.on_event("startup")
 async def startup_event():
     await init_db_indexes()
     await seed_admin()
+    asyncio.create_task(check_reminders_loop())
+    
     # Try to discover active session automatically
     global SESSION_ID
     try:
@@ -58,7 +96,6 @@ async def startup_event():
     except Exception as e:
         logger.warning(f"⚠️ Could not auto-discover session: {e}")
 
-logger = get_logger("main")
 
 class UserCreate(BaseModel):
     username: str
