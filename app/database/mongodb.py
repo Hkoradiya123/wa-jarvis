@@ -15,6 +15,7 @@ memories = db.memories
 reminders = db.reminders
 prompts = db.prompts
 users = db.users
+ai_chats = db.ai_chats
 
 from passlib.context import CryptContext
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
