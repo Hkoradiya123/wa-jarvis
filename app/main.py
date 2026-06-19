@@ -215,6 +215,22 @@ async def send_whatsapp_message(to: str, body: str, thought: str = None):
     except Exception as e:
         send_logger.error(f"Error sending message to {to}: {str(e)}", exc_info=True)
 
+ALLOWED_ACTIONS = {"SAVE_MEMORY", "CREATE_REMINDER", "CREATE_PLAN"}
+
+def sanitize_input(value: str) -> bool:
+    """Returns True if the input is safe, False if it contains sensitive PII."""
+    if not value:
+        return True
+    sensitive_keywords = ["password", "secret", "api_key", "apikey", "token", "cvv", "otp", "credit card"]
+    value_lower = value.lower()
+    for kw in sensitive_keywords:
+        if kw in value_lower:
+            return False
+    # Regex check for potential credit cards or API keys
+    if re.search(r'\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b', value):
+        return False
+    return True
+
 async def execute_agent_action(user_id: str, action_json: str):
     """
     Parses the JSON action from an agent and executes the corresponding DB task.
@@ -224,27 +240,41 @@ async def execute_agent_action(user_id: str, action_json: str):
         data = json.loads(action_json)
         action = data.get("action")
         
+        if action not in ALLOWED_ACTIONS:
+            logger.warning(f"Rejected unauthorized action: {action} requested by user: {user_id}")
+            return "⚠️ Rejected unsafe or invalid action."
+
         if action == "SAVE_MEMORY":
+            val = data.get("value", "")
+            if not sanitize_input(val) or not sanitize_input(data.get("category", "")):
+                logger.warning(f"Blocked potential PII storage in SAVE_MEMORY for user: {user_id}")
+                return "⚠️ Action blocked: Sensitive information (password/API key/card/OTP) cannot be stored."
             from app.database.mongodb import save_memory_task
-            await save_memory_task(user_id, data.get("category", "general"), data.get("value", ""))
-            return f"✅ Memory saved: {data.get('value')}"
+            await save_memory_task(user_id, data.get("category", "general"), val)
+            return f"✅ Memory saved: {val}"
             
         elif action == "CREATE_REMINDER":
+            title = data.get("title", "")
+            if not sanitize_input(title):
+                logger.warning(f"Blocked potential PII storage in CREATE_REMINDER for user: {user_id}")
+                return "⚠️ Action blocked: Sensitive information (password/API key/card/OTP) cannot be stored."
             from app.database.mongodb import save_reminder_task
-            await save_reminder_task(user_id, data.get("title", ""), data.get("datetime", ""), data.get("priority", "medium"))
-            return f"✅ Reminder set: {data.get('title')} for {data.get('datetime')}"
+            await save_reminder_task(user_id, title, data.get("datetime", ""), data.get("priority", "medium"))
+            return f"✅ Reminder set: {title} for {data.get('datetime')}"
             
         elif action == "CREATE_PLAN":
             items = data.get("items", [])
+            for item in items:
+                if not sanitize_input(item):
+                    return "⚠️ Action blocked: Sensitive information detected in plan items."
             plan_text = f"📅 *YOUR {data.get('type', 'DAILY').upper()} PLAN*\n\n"
             plan_text += "\n".join([f"• {item}" for item in items])
             return plan_text
             
-        # Add more actions as needed
-        
-        return action_json # Fallback to raw if not matched
+        return "⚠️ Rejected unsafe or invalid action."
     except:
-        return action_json # Fallback if not JSON
+        return "⚠️ Failed to execute action: Invalid action format."
+
 
 async def process_message(payload: dict):
     if not payload: return
