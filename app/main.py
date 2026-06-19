@@ -9,12 +9,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from app.utils.llm import call_llm
 from app.agents.router_agent import get_router_prompt, AgentType, RouterResponse
-from app.agents.ai_agent import get_ai_prompt
-from app.agents.memory_agent import get_memory_prompt
-from app.agents.reminder_agent import get_reminder_prompt
-from app.agents.planner_agent import get_planner_prompt
 from app.agents.summarizer_agent import get_summarizer_prompt
-from app.agents.search_agent import get_search_prompt
+from app.agents.registry import get_agent_prompt
 from app.utils.mcp_tools import search_and_summarize
 from app.agents.base import get_global_rules
 from app.database.mongodb import (
@@ -171,13 +167,13 @@ class PromptUpdate(BaseModel):
 @app.get("/api/prompts")
 async def list_prompts():
     all_prompts = {
-        "AI_AGENT": await get_ai_prompt(),
-        "MEMORY_AGENT": await get_memory_prompt(),
-        "REMINDER_AGENT": await get_reminder_prompt(),
-        "PLANNER_AGENT": await get_planner_prompt(),
+        "AI_AGENT": await get_agent_prompt("AI_AGENT"),
+        "MEMORY_AGENT": await get_agent_prompt("MEMORY_AGENT"),
+        "REMINDER_AGENT": await get_agent_prompt("REMINDER_AGENT"),
+        "PLANNER_AGENT": await get_agent_prompt("PLANNER_AGENT"),
         "SUMMARIZER_AGENT": await get_summarizer_prompt(),
         "ROUTER_AGENT": await get_router_prompt(),
-        "SEARCH_AGENT": await get_search_prompt()
+        "SEARCH_AGENT": await get_agent_prompt("SEARCH_AGENT")
     }
     return all_prompts
 
@@ -443,11 +439,9 @@ async def process_message(payload: dict):
             memory_context = "\nRELEVANT MEMORIES (use these to personalize your response or recall user preferences/facts):\n" + "\n".join([f"- [{m.get('category')}]: {m.get('value')}" for m in relevant_memories]) + "\n"
         
         system_prompt = get_global_rules() + "\n" + memory_context
-        if agent_type == "AI_AGENT": system_prompt += await get_ai_prompt()
-        elif agent_type == "MEMORY_AGENT": system_prompt += await get_memory_prompt()
-        elif agent_type == "REMINDER_AGENT": system_prompt += await get_reminder_prompt()
-        elif agent_type == "PLANNER_AGENT": system_prompt += await get_planner_prompt()
-        elif agent_type == "SEARCH_AGENT":
+        if agent_type != "SEARCH_AGENT":
+            system_prompt += await get_agent_prompt(agent_type)
+        else:
             # --- SEARCH AGENT SPECIAL FLOW ---
             await log_manager.broadcast({"type": "thought", "content": "Formulating search query from context..."})
             
@@ -479,7 +473,7 @@ async def process_message(payload: dict):
                 
             await log_manager.broadcast({"type": "thought", "content": f"Performing internet search for: '{optimized_query}'..."})
             search_data = await search_and_summarize(optimized_query)
-            search_prompt = await get_search_prompt()
+            search_prompt = await get_agent_prompt("SEARCH_AGENT")
             system_prompt = get_global_rules() + "\n" + search_prompt.format(query=optimized_query, data=search_data)
             # Re-call LLM with search data
             final_messages = [{"role": "system", "content": system_prompt}] + context_messages
@@ -487,7 +481,6 @@ async def process_message(payload: dict):
             input_tokens += estimate_tokens(str(final_messages))
             output_tokens += estimate_tokens(response_text)
             # ---------------------------------
-        else: system_prompt += await get_ai_prompt()
 
         if agent_type != "SEARCH_AGENT":
             # Combine System Prompt + History
@@ -626,15 +619,9 @@ async def get_ai_response(user_id: str, query: str, session_id: str = None):
     system_prompt = get_global_rules() + "\n" + memory_context
     response_text = ""
     
-    if agent_type == "AI_AGENT":
-        system_prompt += await get_ai_prompt()
-    elif agent_type == "MEMORY_AGENT":
-        system_prompt += await get_memory_prompt()
-    elif agent_type == "REMINDER_AGENT":
-        system_prompt += await get_reminder_prompt()
-    elif agent_type == "PLANNER_AGENT":
-        system_prompt += await get_planner_prompt()
-    elif agent_type == "SEARCH_AGENT":
+    if agent_type != "SEARCH_AGENT":
+        system_prompt += await get_agent_prompt(agent_type)
+    else:
         # --- SEARCH AGENT SPECIAL FLOW ---
         # Formulate optimized search query from history context
         search_query_prompt = (
@@ -658,13 +645,11 @@ async def get_ai_response(user_id: str, query: str, session_id: str = None):
             optimized_query = query
             
         search_data = await search_and_summarize(optimized_query)
-        search_prompt = await get_search_prompt()
+        search_prompt = await get_agent_prompt("SEARCH_AGENT")
         system_prompt = get_global_rules() + "\n" + search_prompt.format(query=optimized_query, data=search_data)
         # Re-call LLM with search data
         final_messages = [{"role": "system", "content": system_prompt}] + context_messages + [{"role": "user", "content": query}]
         response_text = await call_llm(final_messages)
-    else:
-        system_prompt += await get_ai_prompt()
 
     if agent_type != "SEARCH_AGENT":
         final_messages = [{"role": "system", "content": system_prompt}] + context_messages + [{"role": "user", "content": query}]
