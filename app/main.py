@@ -21,7 +21,8 @@ from app.database.mongodb import (
     get_all_memories, delete_memory, get_all_reminders, update_db_prompt,
     db as mongodb_db, get_user, verify_password, seed_admin, list_users, create_user, delete_user,
     get_all_conversations, get_conversation_history,
-    get_ai_chat_sessions, get_ai_chat_history, add_ai_chat_message, init_db_indexes
+    get_ai_chat_sessions, get_ai_chat_history, add_ai_chat_message, init_db_indexes,
+    get_relevant_memories
 )
 from pydantic import BaseModel, Field
 from app.utils.logger import get_logger, log_manager
@@ -421,7 +422,12 @@ async def process_message(payload: dict):
         })
 
         # 5. Specialized Agent Logic
-        system_prompt = get_global_rules() + "\n"
+        relevant_memories = await get_relevant_memories(sender, clean_query)
+        memory_context = ""
+        if relevant_memories:
+            memory_context = "\nRELEVANT MEMORIES (use these to personalize your response or recall user preferences/facts):\n" + "\n".join([f"- [{m.get('category')}]: {m.get('value')}" for m in relevant_memories]) + "\n"
+        
+        system_prompt = get_global_rules() + "\n" + memory_context
         if agent_type == "AI_AGENT": system_prompt += await get_ai_prompt()
         elif agent_type == "MEMORY_AGENT": system_prompt += await get_memory_prompt()
         elif agent_type == "REMINDER_AGENT": system_prompt += await get_reminder_prompt()
@@ -560,7 +566,12 @@ async def get_ai_response(user_id: str, query: str, session_id: str = None):
                     break
 
     # 2. Specialized Agent Logic
-    system_prompt = get_global_rules() + "\n"
+    relevant_memories = await get_relevant_memories(user_id, query)
+    memory_context = ""
+    if relevant_memories:
+        memory_context = "\nRELEVANT MEMORIES (use these to personalize your response or recall user preferences/facts):\n" + "\n".join([f"- [{m.get('category')}]: {m.get('value')}" for m in relevant_memories]) + "\n"
+    
+    system_prompt = get_global_rules() + "\n" + memory_context
     response_text = ""
     
     if agent_type == "AI_AGENT":

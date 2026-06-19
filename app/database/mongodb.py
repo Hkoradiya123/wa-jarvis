@@ -106,6 +106,42 @@ async def get_all_memories():
     cursor = memories.find({}).sort("timestamp", -1)       
     return await cursor.to_list(length=100)
 
+async def get_relevant_memories(user_id: str, query: str, limit: int = 5):
+    import re
+    cursor = memories.find({"user_id": user_id})
+    all_items = await cursor.to_list(length=None)
+    if not all_items:
+        # Fallback to generic memories (for users without explicit user_id yet)
+        cursor = memories.find({"user_id": {"$exists": False}})
+        all_items = await cursor.to_list(length=None)
+        if not all_items:
+            # Fallback to any memory
+            cursor = memories.find({})
+            all_items = await cursor.to_list(length=100)
+            
+    if not all_items:
+        return []
+    
+    query_words = set(re.findall(r'\w+', query.lower()))
+    if not query_words:
+        return all_items[:limit]
+        
+    scored_items = []
+    for item in all_items:
+        val = item.get("value", "")
+        cat = item.get("category", "")
+        item_words = set(re.findall(r'\w+', (val + " " + cat).lower()))
+        score = len(query_words.intersection(item_words))
+        scored_items.append((score, item))
+        
+    scored_items.sort(key=lambda x: x[0], reverse=True)
+    
+    # If no keyword overlap matches, fallback to returning the 3 most recent memories
+    matches = [item for score, item in scored_items if score > 0]
+    if not matches:
+        return all_items[:3]
+    return matches[:limit]
+
 async def delete_memory(memory_id: str):
     from bson import ObjectId
     await memories.delete_one({"_id": ObjectId(memory_id)})
