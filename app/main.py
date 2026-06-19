@@ -428,41 +428,97 @@ async def websocket_endpoint(websocket: WebSocket):
         log_manager.disconnect(websocket)
 
 
-async def get_ai_response(user_id: str, query: str):
+async def get_ai_response(user_id: str, query: str, session_id: str = None):
     """
-    A stateless function to get a direct response from the AI logic.
-    This reuses the core agent routing and execution flow without saving to the database.
+    Retrieves history and gets a response from the AI logic, running the full agent routing and execution flow.
     """
-    # Use a generic history for stateless chat, or fetch a user-specific one if needed
-    history = await get_recent_history(user_id, limit=5)
-    context_messages = [{"role": h["role"], "content": h["content"]} for h in history]
+    if session_id:
+        from app.database.mongodb import get_ai_chat_history
+        history = await get_ai_chat_history(session_id)
+        # Convert DB history format
+        # If the latest saved message in DB is the current user query, exclude it from history context
+        context_messages = [{"role": h["role"], "content": h["content"]} for h in history]
+        if context_messages and context_messages[-1]["role"] == "user" and context_messages[-1]["content"] == query:
+            context_messages = context_messages[:-1]
+    else:
+        history = await get_recent_history(user_id, limit=5)
+        context_messages = [{"role": h["role"], "content": h["content"]} for h in history]
 
     # 1. Routing
     router_prompt = await get_router_prompt() + "\nReturn only valid JSON."
     routing_messages = [{"role": "system", "content": router_prompt}] + context_messages[-3:] + [{"role": "user", "content": query}]
     router_raw = await call_llm(routing_messages, max_tokens=200)
     
+    router_clean = router_raw.strip()
+    if "```" in router_clean:
+        router_clean = router_clean.split("```")[1].replace("json", "").strip()
+        
     try:
-        agent_type = json.loads(router_raw.strip().split("```")[1].replace("json", "").strip()).get("agent", "AI_AGENT")
+        agent_type = json.loads(router_clean).get("agent", "AI_AGENT")
     except:
         agent_type = "AI_AGENT"
 
     # 2. Specialized Agent Logic
     system_prompt = get_global_rules() + "\n"
-    if agent_type == "AI_AGENT": system_prompt += await get_ai_prompt()
-    # ... (add other agents as needed, similar to process_message)
-    else: system_prompt += await get_ai_prompt()
-
-    # 3. Get Response
-    final_messages = [{"role": "system", "content": system_prompt}] + context_messages + [{"role": "user", "content": query}]
-    response_text = await call_llm(final_messages)
+    response_text = ""
     
-    # 4. Extract Answer
-    answer_match = re.search(r'<answer>(.*?)</answer>', response_text, re.DOTALL)
-    if answer_match:
-        return answer_match.group(1).strip()
+    if agent_type == "AI_AGENT":
+        system_prompt += await get_ai_prompt()
+    elif agent_type == "MEMORY_AGENT":
+        system_prompt += await get_memory_prompt()
+    elif agent_type == "REMINDER_AGENT":
+        system_prompt += await get_reminder_prompt()
+    elif agent_type == "PLANNER_AGENT":
+        system_prompt += await get_planner_prompt()
+    elif agent_type == "SEARCH_AGENT":
+        # --- SEARCH AGENT SPECIAL FLOW ---
+        # Formulate optimized search query from history context
+        search_query_prompt = (
+            "You are a search query optimizer. Given the conversation history and the user's latest message, "
+            "generate a single, concise search query (in English) to find the relevant information. "
+            "CRITICAL: Avoid using the word 'current' for prices, rates, or news as it confuses search engines "
+            "with 'electric current'. Use 'today', 'latest', or 'live' instead (e.g., use 'gold price today Mumbai' "
+            "instead of 'current gold price in Mumbai'). "
+            "If the latest message is a confirmation (e.g. 'yes', 'do it', 'go ahead') to a search suggested by the assistant, "
+            "formulate the query based on the topic the assistant offered to look up. "
+            "Only return the search query itself, nothing else. No quotes, no markdown, no tags."
+        )
+        query_gen_messages = [
+            {"role": "system", "content": search_query_prompt}
+        ] + context_messages + [{"role": "user", "content": query}]
+        
+        optimized_query = await call_llm(query_gen_messages, max_tokens=50)
+        optimized_query = optimized_query.strip().strip('"').strip("'").strip()
+        
+        if not optimized_query or optimized_query.lower() in ["yes", "no", "do it", "go ahead"]:
+            optimized_query = query
+            
+        search_data = await search_and_summarize(optimized_query)
+        search_prompt = await get_search_prompt()
+        system_prompt = get_global_rules() + "\n" + search_prompt.format(query=optimized_query, data=search_data)
+        # Re-call LLM with search data
+        final_messages = [{"role": "system", "content": system_prompt}] + context_messages + [{"role": "user", "content": query}]
+        response_text = await call_llm(final_messages)
     else:
-        return re.sub(r'<thought>.*?</thought>', '', response_text, flags=re.DOTALL).strip()
+        system_prompt += await get_ai_prompt()
+
+    if agent_type != "SEARCH_AGENT":
+        final_messages = [{"role": "system", "content": system_prompt}] + context_messages + [{"role": "user", "content": query}]
+        response_text = await call_llm(final_messages)
+        
+    # 3. Extract Thought and Answer
+    answer_match = re.search(r'<thought>(.*?)</thought>', response_text, re.DOTALL)
+    answer_text = re.search(r'<answer>(.*?)</answer>', response_text, re.DOTALL)
+    
+    if answer_text:
+        clean_answer = answer_text.group(1).strip()
+        # If it's a specialized agent, execute the action
+        if agent_type in ["MEMORY_AGENT", "REMINDER_AGENT", "PLANNER_AGENT"]:
+            clean_answer = await execute_agent_action(user_id, clean_answer)
+    else:
+        clean_answer = re.sub(r'<thought>.*?</thought>', '', response_text, flags=re.DOTALL).strip()
+        
+    return clean_answer
 
 class NewChatMessage(BaseModel):
     message: str
@@ -492,8 +548,8 @@ async def handle_new_ai_chat(request: Request, chat_message: NewChatMessage):
     # Save user message
     await add_ai_chat_message(session_id, "user", chat_message.message)
     
-    # Get AI response (using the existing stateless function for the logic)
-    ai_response_content = await get_ai_response(user_id, chat_message.message)
+    # Get AI response with full routing and session context
+    ai_response_content = await get_ai_response(user_id, chat_message.message, session_id=session_id)
     
     # Save AI message
     await add_ai_chat_message(session_id, "assistant", ai_response_content)
