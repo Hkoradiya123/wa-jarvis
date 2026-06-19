@@ -3,6 +3,7 @@ import json
 import httpx
 import re
 import uuid
+import time
 from fastapi import FastAPI, Request, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
@@ -29,6 +30,11 @@ from app.utils.logger import get_logger, log_manager
 from dotenv import load_dotenv
 
 load_dotenv(override=True)
+
+def estimate_tokens(text: str) -> int:
+    if not text:
+        return 0
+    return len(text) // 4
 
 app = FastAPI()
 logger = get_logger("main")
@@ -350,6 +356,11 @@ async def process_message(payload: dict):
         await send_whatsapp_message(sender, "Yes? How can I help you?")
         return
 
+    start_time = time.time()
+    request_id = message_id or str(uuid.uuid4())[:8]
+    input_tokens = estimate_tokens(clean_query)
+    output_tokens = 0
+
     # 2. Save user message to history
     saved = await save_message(sender, "user", clean_query, message_id=message_id)
     if not saved:
@@ -375,6 +386,8 @@ async def process_message(payload: dict):
             {"role": "system", "content": summary_prompt},
             {"role": "user", "content": f"Summarize this:\n{history_text}"}
         ], max_tokens=250)
+        input_tokens += estimate_tokens(summary_prompt) + estimate_tokens(history_text)
+        output_tokens += estimate_tokens(summary)
         
         await delete_oldest_messages(sender, 10)
         await save_message(sender, "system", f"Context Summary: {summary}")
@@ -391,6 +404,8 @@ async def process_message(payload: dict):
         # Give router some context from history for better classification
         routing_messages = [{"role": "system", "content": router_prompt}] + context_messages[-3:] + [{"role": "user", "content": clean_query}]
         router_raw = await call_llm(routing_messages, max_tokens=200)
+        input_tokens += estimate_tokens(str(routing_messages))
+        output_tokens += estimate_tokens(router_raw)
         
         # Clean JSON
         router_clean = router_raw.strip()
@@ -454,6 +469,9 @@ async def process_message(payload: dict):
             ] + routing_history + [{"role": "user", "content": clean_query}]
             
             optimized_query = await call_llm(query_gen_messages, max_tokens=50)
+            input_tokens += estimate_tokens(str(query_gen_messages))
+            output_tokens += estimate_tokens(optimized_query)
+            
             optimized_query = optimized_query.strip().strip('"').strip("'").strip()
             
             if not optimized_query or optimized_query.lower() in ["yes", "no", "do it", "go ahead"]:
@@ -466,6 +484,8 @@ async def process_message(payload: dict):
             # Re-call LLM with search data
             final_messages = [{"role": "system", "content": system_prompt}] + context_messages
             response_text = await call_llm(final_messages)
+            input_tokens += estimate_tokens(str(final_messages))
+            output_tokens += estimate_tokens(response_text)
             # ---------------------------------
         else: system_prompt += await get_ai_prompt()
 
@@ -473,6 +493,8 @@ async def process_message(payload: dict):
             # Combine System Prompt + History
             final_messages = [{"role": "system", "content": system_prompt}] + context_messages
             response_text = await call_llm(final_messages)
+            input_tokens += estimate_tokens(str(final_messages))
+            output_tokens += estimate_tokens(response_text)
         
         # 6. Extract Thought and Answer
         thought_match = re.search(r'<thought>(.*?)</thought>', response_text, re.DOTALL)
@@ -501,12 +523,42 @@ async def process_message(payload: dict):
         })
         await send_whatsapp_message(sender, clean_answer, thought=thought)
 
+        # Log process metrics
+        latency_ms = int((time.time() - start_time) * 1000)
+        logger.info(json.dumps({
+            "event": "message_processed",
+            "request_id": request_id,
+            "sender": sender,
+            "agent_type": agent_type,
+            "latency_ms": latency_ms,
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "cost_usd": (input_tokens * 0.00000015) + (output_tokens * 0.0000006)
+        }))
+        await log_manager.broadcast({
+            "type": "performance",
+            "request_id": request_id,
+            "agent": agent_type,
+            "latency_ms": latency_ms,
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens
+        })
+
     except Exception as e:
         logger.error("Error processing message", exc_info=True)
         await log_manager.broadcast({
             "type": "error",
             "message": str(e)
         })
+        latency_ms = int((time.time() - start_time) * 1000)
+        logger.info(json.dumps({
+            "event": "message_failed",
+            "request_id": request_id,
+            "sender": sender,
+            "agent_type": agent_type,
+            "latency_ms": latency_ms,
+            "error": str(e)
+        }))
 
 @app.websocket("/ws/logs")
 async def websocket_endpoint(websocket: WebSocket):
