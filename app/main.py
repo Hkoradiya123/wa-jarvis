@@ -341,10 +341,32 @@ async def process_message(payload: dict):
         elif agent_type == "PLANNER_AGENT": system_prompt += await get_planner_prompt()
         elif agent_type == "SEARCH_AGENT":
             # --- SEARCH AGENT SPECIAL FLOW ---
-            await log_manager.broadcast({"type": "thought", "content": "Performing internet search..."})
-            search_data = await search_and_summarize(clean_query)
+            await log_manager.broadcast({"type": "thought", "content": "Formulating search query from context..."})
+            
+            # Formulate optimized search query from history context
+            search_query_prompt = (
+                "You are a search query optimizer. Given the conversation history and the user's latest message, "
+                "generate a single, concise search query (in English) to find the relevant information. "
+                "If the latest message is a confirmation (e.g. 'yes', 'do it', 'go ahead') to a search suggested by the assistant, "
+                "formulate the query based on the topic the assistant offered to look up. "
+                "Only return the search query itself, nothing else. No quotes, no markdown, no tags."
+            )
+            # Use all history up to the latest query
+            routing_history = context_messages[:-1] if len(context_messages) > 0 else []
+            query_gen_messages = [
+                {"role": "system", "content": search_query_prompt}
+            ] + routing_history + [{"role": "user", "content": clean_query}]
+            
+            optimized_query = await call_llm(query_gen_messages, max_tokens=50)
+            optimized_query = optimized_query.strip().strip('"').strip("'").strip()
+            
+            if not optimized_query or optimized_query.lower() in ["yes", "no", "do it", "go ahead"]:
+                optimized_query = clean_query
+                
+            await log_manager.broadcast({"type": "thought", "content": f"Performing internet search for: '{optimized_query}'..."})
+            search_data = await search_and_summarize(optimized_query)
             search_prompt = await get_search_prompt()
-            system_prompt = get_global_rules() + "\n" + search_prompt.format(query=clean_query, data=search_data)
+            system_prompt = get_global_rules() + "\n" + search_prompt.format(query=optimized_query, data=search_data)
             # Re-call LLM with search data
             final_messages = [{"role": "system", "content": system_prompt}] + context_messages
             response_text = await call_llm(final_messages)
