@@ -32,6 +32,24 @@ def estimate_tokens(text: str) -> int:
         return 0
     return len(text) // 4
 
+def determine_agent_by_rules(query: str) -> str | None:
+    q = query.strip().lower()
+    if q in ["hello", "hi", "hey", "how are you", "yo"]:
+        return AgentType.AI_AGENT.value
+    reminder_keywords = ["remind me", "set a reminder", "create reminder", "reminders", "set alarm"]
+    if any(k in q for k in reminder_keywords):
+        return AgentType.REMINDER_AGENT.value
+    memory_keywords = ["remember that", "save memory", "remember my", "forget my", "what is my", "do you remember"]
+    if any(k in q for k in memory_keywords):
+        return AgentType.MEMORY_AGENT.value
+    search_keywords = ["search the web", "search for", "look up", "google", "latest news", "weather in", "price of today"]
+    if any(k in q for k in search_keywords):
+        return AgentType.SEARCH_AGENT.value
+    planner_keywords = ["plan my day", "create a plan", "planner", "schedules", "daily plan"]
+    if any(k in q for k in planner_keywords):
+        return AgentType.PLANNER_AGENT.value
+    return None
+
 app = FastAPI()
 logger = get_logger("main")
 
@@ -396,36 +414,38 @@ async def process_message(payload: dict):
         context_messages = [{"role": h["role"], "content": h["content"]} for h in history]
 
         # 4. Routing
-        router_prompt = await get_router_prompt() + "\nReturn only valid JSON."
-        # Give router some context from history for better classification
-        routing_messages = [{"role": "system", "content": router_prompt}] + context_messages[-3:] + [{"role": "user", "content": clean_query}]
-        router_raw = await call_llm(routing_messages, max_tokens=200)
-        input_tokens += estimate_tokens(str(routing_messages))
-        output_tokens += estimate_tokens(router_raw)
-        
-        # Clean JSON
-        router_clean = router_raw.strip()
-        if "```" in router_clean:
-            router_clean = router_clean.split("```")[1].replace("json", "").strip()
-        
-        try:
-            parsed_response = RouterResponse.model_validate_json(router_clean)
-            agent_type = parsed_response.agent.value
-        except Exception:
-            agent_type = AgentType.AI_AGENT.value
+        agent_type = determine_agent_by_rules(clean_query)
+        if agent_type:
+            logger.info(f"Rule-based routing matched: {agent_type} for query: '{clean_query}'")
+        else:
+            router_prompt = await get_router_prompt() + "\nReturn only valid JSON."
+            routing_messages = [{"role": "system", "content": router_prompt}] + context_messages[-3:] + [{"role": "user", "content": clean_query}]
+            router_raw = await call_llm(routing_messages, max_tokens=200)
+            input_tokens += estimate_tokens(str(routing_messages))
+            output_tokens += estimate_tokens(router_raw)
+            
+            router_clean = router_raw.strip()
+            if "```" in router_clean:
+                router_clean = router_clean.split("```")[1].replace("json", "").strip()
+            
             try:
-                raw_json = json.loads(router_clean)
-                agent_val = str(raw_json.get("agent", "")).strip().upper().replace(" ", "_").replace("-", "_")
-                for at in AgentType:
-                    if at.value == agent_val:
-                        agent_type = at.value
-                        break
+                parsed_response = RouterResponse.model_validate_json(router_clean)
+                agent_type = parsed_response.agent.value
             except Exception:
-                raw_upper = router_raw.upper()
-                for at in AgentType:
-                    if at.value in raw_upper:
-                        agent_type = at.value
-                        break
+                agent_type = AgentType.AI_AGENT.value
+                try:
+                    raw_json = json.loads(router_clean)
+                    agent_val = str(raw_json.get("agent", "")).strip().upper().replace(" ", "_").replace("-", "_")
+                    for at in AgentType:
+                        if at.value == agent_val:
+                            agent_type = at.value
+                            break
+                except Exception:
+                    raw_upper = router_raw.upper()
+                    for at in AgentType:
+                        if at.value in raw_upper:
+                            agent_type = at.value
+                            break
 
         await log_manager.broadcast({
             "type": "routing",
@@ -583,32 +603,36 @@ async def get_ai_response(user_id: str, query: str, session_id: str = None):
         context_messages = [{"role": h["role"], "content": h["content"]} for h in history]
 
     # 1. Routing
-    router_prompt = await get_router_prompt() + "\nReturn only valid JSON."
-    routing_messages = [{"role": "system", "content": router_prompt}] + context_messages[-3:] + [{"role": "user", "content": query}]
-    router_raw = await call_llm(routing_messages, max_tokens=200)
-    
-    router_clean = router_raw.strip()
-    if "```" in router_clean:
-        router_clean = router_clean.split("```")[1].replace("json", "").strip()
+    agent_type = determine_agent_by_rules(query)
+    if agent_type:
+        logger.info(f"Rule-based routing matched: {agent_type} for query: '{query}'")
+    else:
+        router_prompt = await get_router_prompt() + "\nReturn only valid JSON."
+        routing_messages = [{"role": "system", "content": router_prompt}] + context_messages[-3:] + [{"role": "user", "content": query}]
+        router_raw = await call_llm(routing_messages, max_tokens=200)
         
-    try:
-        parsed_response = RouterResponse.model_validate_json(router_clean)
-        agent_type = parsed_response.agent.value
-    except Exception:
-        agent_type = AgentType.AI_AGENT.value
+        router_clean = router_raw.strip()
+        if "```" in router_clean:
+            router_clean = router_clean.split("```")[1].replace("json", "").strip()
+            
         try:
-            raw_json = json.loads(router_clean)
-            agent_val = str(raw_json.get("agent", "")).strip().upper().replace(" ", "_").replace("-", "_")
-            for at in AgentType:
-                if at.value == agent_val:
-                    agent_type = at.value
-                    break
+            parsed_response = RouterResponse.model_validate_json(router_clean)
+            agent_type = parsed_response.agent.value
         except Exception:
-            raw_upper = router_raw.upper()
-            for at in AgentType:
-                if at.value in raw_upper:
-                    agent_type = at.value
-                    break
+            agent_type = AgentType.AI_AGENT.value
+            try:
+                raw_json = json.loads(router_clean)
+                agent_val = str(raw_json.get("agent", "")).strip().upper().replace(" ", "_").replace("-", "_")
+                for at in AgentType:
+                    if at.value == agent_val:
+                        agent_type = at.value
+                        break
+            except Exception:
+                raw_upper = router_raw.upper()
+                for at in AgentType:
+                    if at.value in raw_upper:
+                        agent_type = at.value
+                        break
 
     # 2. Specialized Agent Logic
     relevant_memories = await get_relevant_memories(user_id, query)
