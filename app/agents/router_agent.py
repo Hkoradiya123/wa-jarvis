@@ -1,4 +1,16 @@
+from enum import Enum
+from pydantic import BaseModel
 from app.database.mongodb import get_db_prompt
+
+class AgentType(str, Enum):
+    AI_AGENT = "AI_AGENT"
+    MEMORY_AGENT = "MEMORY_AGENT"
+    REMINDER_AGENT = "REMINDER_AGENT"
+    PLANNER_AGENT = "PLANNER_AGENT"
+    SEARCH_AGENT = "SEARCH_AGENT"
+
+class RouterResponse(BaseModel):
+    agent: AgentType
 
 ROUTER_AGENT_PROMPT = """
 ROLE:

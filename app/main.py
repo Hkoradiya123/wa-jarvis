@@ -7,7 +7,7 @@ from fastapi import FastAPI, Request, BackgroundTasks, WebSocket, WebSocketDisco
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from app.utils.llm import call_llm
-from app.agents.router_agent import get_router_prompt
+from app.agents.router_agent import get_router_prompt, AgentType, RouterResponse
 from app.agents.ai_agent import get_ai_prompt
 from app.agents.memory_agent import get_memory_prompt
 from app.agents.reminder_agent import get_reminder_prompt
@@ -360,9 +360,23 @@ async def process_message(payload: dict):
             router_clean = router_clean.split("```")[1].replace("json", "").strip()
         
         try:
-            agent_type = json.loads(router_clean).get("agent", "AI_AGENT")
-        except:
-            agent_type = "AI_AGENT"
+            parsed_response = RouterResponse.model_validate_json(router_clean)
+            agent_type = parsed_response.agent.value
+        except Exception:
+            agent_type = AgentType.AI_AGENT.value
+            try:
+                raw_json = json.loads(router_clean)
+                agent_val = str(raw_json.get("agent", "")).strip().upper().replace(" ", "_").replace("-", "_")
+                for at in AgentType:
+                    if at.value == agent_val:
+                        agent_type = at.value
+                        break
+            except Exception:
+                raw_upper = router_raw.upper()
+                for at in AgentType:
+                    if at.value in raw_upper:
+                        agent_type = at.value
+                        break
 
         await log_manager.broadcast({
             "type": "routing",
@@ -490,9 +504,23 @@ async def get_ai_response(user_id: str, query: str, session_id: str = None):
         router_clean = router_clean.split("```")[1].replace("json", "").strip()
         
     try:
-        agent_type = json.loads(router_clean).get("agent", "AI_AGENT")
-    except:
-        agent_type = "AI_AGENT"
+        parsed_response = RouterResponse.model_validate_json(router_clean)
+        agent_type = parsed_response.agent.value
+    except Exception:
+        agent_type = AgentType.AI_AGENT.value
+        try:
+            raw_json = json.loads(router_clean)
+            agent_val = str(raw_json.get("agent", "")).strip().upper().replace(" ", "_").replace("-", "_")
+            for at in AgentType:
+                if at.value == agent_val:
+                    agent_type = at.value
+                    break
+        except Exception:
+            raw_upper = router_raw.upper()
+            for at in AgentType:
+                if at.value in raw_upper:
+                    agent_type = at.value
+                    break
 
     # 2. Specialized Agent Logic
     system_prompt = get_global_rules() + "\n"
